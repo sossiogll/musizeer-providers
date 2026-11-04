@@ -7,14 +7,14 @@ from pathlib import Path
 
 import pytest
 
-import musizerr_provider_ftp as module
-from musizerr_provider_ftp import FTPStorageProvider
-from musizerr_sdk import net
-from musizerr_sdk.interfaces import PROVIDER_API_VERSION
-from musizerr_sdk.context import StaticProviderContext
-from musizerr_sdk.labels import LABEL_LABEL, declared_from_labels, labels_for
-from musizerr_sdk.manifest import build
-from musizerr_sdk.permissions import Permissions, TcpAccess, canonical, from_json, tcp_hosts, to_json, validate
+import musizeer_provider_ftp as module
+from musizeer_provider_ftp import FTPStorageProvider
+from musizeer_sdk import net
+from musizeer_sdk.interfaces import PROVIDER_API_VERSION
+from musizeer_sdk.context import StaticProviderContext
+from musizeer_sdk.labels import LABEL_LABEL, declared_from_labels, labels_for
+from musizeer_sdk.manifest import build
+from musizeer_sdk.permissions import Permissions, TcpAccess, canonical, from_json, tcp_hosts, to_json, validate
 
 from permissions_support import allowed
 
@@ -51,9 +51,9 @@ def test_the_permissions_survive_the_label_round_trip(provider):
 def test_the_dockerfile_agrees_with_the_provider():
     dockerfile = (PROVIDER_DIR / "Dockerfile").read_text()
 
-    assert re.search(r'org\.musizerr\.provider\.label="FTP Storage"', dockerfile)
-    assert "musizerr-provider-base:5" in dockerfile
-    assert "musizerr_provider_ftp:FTPStorageProvider" in dockerfile
+    assert re.search(r'org\.musizeer\.provider\.label="FTP Storage"', dockerfile)
+    assert "musizeer-provider-base:6" in dockerfile
+    assert "musizeer_provider_ftp:FTPStorageProvider" in dockerfile
     assert "org.opencontainers.image.description=" in dockerfile and "org.opencontainers.image.url=" in dockerfile
 
 

@@ -16,10 +16,10 @@ from __future__ import annotations
 
 import logging
 
-from musizerr_sdk.auth import AccountModel, AuthDefinition, AuthFlow, AuthSession
-from musizerr_sdk.interfaces import PROVIDER_API_VERSION, Identity, IdentificationProvider, WorkspaceFile
-from musizerr_sdk.permissions import Permissions
-from musizerr_sdk.settings import ProviderSetting
+from musizeer_sdk.auth import AccountModel, AuthDefinition, AuthFlow, AuthSession
+from musizeer_sdk.interfaces import PROVIDER_API_VERSION, Identity, IdentificationProvider, WorkspaceFile
+from musizeer_sdk.permissions import Permissions
+from musizeer_sdk.settings import ProviderSetting
 
 logger = logging.getLogger(__name__)
 

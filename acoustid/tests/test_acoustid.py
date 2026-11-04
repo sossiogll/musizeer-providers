@@ -26,11 +26,11 @@ from pathlib import Path
 import pytest
 import requests
 
-import musizerr_provider_acoustid as acoustid_module
+import musizeer_provider_acoustid as acoustid_module
 from helpers import via_runner
-from musizerr_sdk.interfaces import WorkspaceFile
-from musizerr_sdk.context import StaticProviderContext
-from musizerr_provider_acoustid import AcoustIDProvider
+from musizeer_sdk.interfaces import WorkspaceFile
+from musizeer_sdk.context import StaticProviderContext
+from musizeer_provider_acoustid import AcoustIDProvider
 
 
 class _FakeAcoustidLib:

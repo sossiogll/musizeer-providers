@@ -2,9 +2,9 @@ name: publish
 
 # Every push to dev publishes the providers whose version has no image on GHCR yet: it tests them, builds each for
 # linux/amd64 and linux/arm64 with the main repository's scripts/publish-provider-image.sh (on the published base
-# image), pushes ghcr.io/<owner>/musizerr-provider-<name>:<version>, pins it in catalog.json and commits catalog.json
+# image), pushes ghcr.io/<owner>/musizeer-provider-<name>:<version>, pins it in catalog.json and commits catalog.json
 # to dev. A push that publishes nothing (catalog.json alone, a script, a README) does nothing. master is never written
-# here: catalog.json reaches it with the next pull request from dev, and master's catalog.json is the one Musizerr
+# here: catalog.json reaches it with the next pull request from dev, and master's catalog.json is the one Musizeer
 # instances read. Pushing needs each package connected to this repository (see the README).
 on:
   push:
@@ -32,8 +32,11 @@ jobs:
       # scripts/publish-provider-image.sh for the images.
       - uses: actions/checkout@v4
         with:
-          repository: sossiogll/musizerr
-          path: .musizerr
+          repository: sossiogll/musizeer
+          # SDK 6 is on the integration branch of the 2.0 release until it is merged into master; then delete this line
+          # (the default branch is the one to build against).
+          ref: release/2.0
+          path: .musizeer
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -52,7 +55,7 @@ jobs:
         if: steps.unpublished.outputs.providers != ''
         env:
           PROVIDERS: ${{ steps.unpublished.outputs.providers }}
-          MUSIZERR_SDK: .musizerr/sdk
+          MUSIZEER_SDK: .musizeer/sdk
         run: |
           # shellcheck disable=SC2086 # one word per provider
           scripts/test.sh $PROVIDERS
@@ -66,7 +69,7 @@ jobs:
         shell: bash
         run: |
           set -uo pipefail
-          export MUSIZERR_REPO=$GITHUB_WORKSPACE/.musizerr GHCR_NAMESPACE="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}"
+          export MUSIZEER_REPO=$GITHUB_WORKSPACE/.musizeer GHCR_NAMESPACE="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}"
           failed=""
           for provider in $PROVIDERS; do
             echo "::group::$provider"

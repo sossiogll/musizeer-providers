@@ -2,7 +2,7 @@
 
 Tells what an audio file **really is** from its sound, not from its tags (which can be wrong): it fingerprints the
 file with [Chromaprint](https://acoustid.org/chromaprint) and asks the [AcoustID](https://acoustid.org) database
-for the recording. Musizerr uses it after a download to catch a mislabelled file and to find true duplicates.
+for the recording. Musizeer uses it after a download to catch a mislabelled file and to find true duplicates.
 
 The provider returns its best match with the raw score and only the **title and artist** (plus the MusicBrainz
 recording id): album and year are not reliable from a fingerprint, so they are not returned. Whether a score is

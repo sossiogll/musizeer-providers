@@ -1,6 +1,6 @@
 """
 The host's side of scripts/integration.sh: the application's own code (``ProviderRegistry``, the host contexts, the
-settings table, the workspaces, the grants) against the REAL gateway and the REAL images of the eight providers of this
+settings table, the root folders and the working folder, the workspaces, the grants) against the REAL gateway and the REAL images of the eight providers of this
 repository, installed from the catalog scripts/build.sh wrote. It prints a marker line for each thing it proves and exits
 non-zero on the first one that is wrong:
 
@@ -20,9 +20,7 @@ non-zero on the first one that is wrong:
   GATEWAY_OK      every provider is still running at the end and the gateway refused none of their connections.
 
 It is run in a container of the application's image, with the code of the main repository (read only) and the volumes of
-the gateway. The main repository still holds the first-party providers in app/providers/: the run copies app/ and removes
-those eight, which is how the registry will be once they are gone (a registry refuses a gateway provider whose name an
-in-process one has).
+the gateway.
 """
 from __future__ import annotations
 
@@ -36,18 +34,21 @@ import time
 import wave
 from pathlib import Path
 
-os.environ.setdefault("DATA_DIR", "/tmp/data")
+os.environ.setdefault("MUSIZEER_DATA_DIR", "/tmp/data")
 
-from db.engine import engine, init_db  # noqa: E402
+from db.engine import engine  # noqa: E402
+from services.database_init import init_db  # noqa: E402
 from sqlmodel import Session  # noqa: E402
 
 from core.settings_resolver import namespace_provider_key  # noqa: E402
+from db import root_store  # noqa: E402
 from db.settings_store import SettingsRepository  # noqa: E402
-from musizerr_sdk.auth import AuthFlow, AuthSession  # noqa: E402
-from musizerr_sdk.models import Album, Track  # noqa: E402
-from musizerr_sdk.permissions import FilesystemAccess, Permissions, TcpAccess, canonical, to_json  # noqa: E402
+from musizeer_sdk.auth import AuthFlow, AuthSession  # noqa: E402
+from musizeer_sdk.models import Album, Track  # noqa: E402
+from musizeer_sdk.permissions import FilesystemAccess, Permissions, TcpAccess, canonical, to_json  # noqa: E402
 from services.config_manager import get_config  # noqa: E402
 from services.gateway_client import GatewayClient  # noqa: E402
+from services.gateway_sync import GatewaySync  # noqa: E402
 from services.provider_proxy import ProviderCallFailed  # noqa: E402
 from services.provider_registry import ProviderRegistry  # noqa: E402
 from services.workspace import new_workspace  # noqa: E402
@@ -83,11 +84,38 @@ def expect(condition: bool, message: str) -> None:
         fail(message)
 
 
-def set_setting(provider: str, key: str, value: str) -> None:
+def set_setting(provider: str, key: str, value) -> None:
     with Session(engine) as session:
         SettingsRepository(session).set_system(namespace_provider_key(provider, key), value)
         session.commit()
     get_config()._cache_loaded_at = 0.0  # noqa: SLF001 — read the settings now, not after the cache window
+
+
+def declare_roots() -> str:
+    """The administrator's part (ADR-0008): the root folder and the working folder, pushed to the gateway the way the host
+    does. The providers have run since the install, before any folder was declared: the gateway restarts them with their
+    part of the working folder (their /workspace). Returns the id of the root."""
+    with Session(engine) as session:
+        downloads = root_store.create(session, "Downloads", "/downloads")
+        SettingsRepository(session).set_system("workspace_dir", {"root_id": downloads.id, "path": ".musizeer-work"})
+        session.commit()
+        root_id = downloads.id
+    get_config()._cache_loaded_at = 0.0  # noqa: SLF001
+    with Session(engine) as session:
+        result = GatewaySync(GatewayClient()).push(session)
+    expect(result.pushed, f"the gateway did not take the folders: {result.error}")
+    working = listing()["workspace"]
+    expect(working["state"] == "accepted", f"the working folder: {working}")
+    # The providers restart with their part of the working folder: wait until they all run again.
+    time.sleep(5)  # the gateway restarts them a moment after the push: do not read the state of the old processes
+    deadline = time.monotonic() + 120
+    while time.monotonic() < deadline:
+        if all(p["state"] == "running" for p in listing()["providers"]):
+            break
+        time.sleep(1)
+    else:
+        fail("the providers did not come back after the working folder was set")
+    return root_id
 
 
 def listing() -> dict:
@@ -136,7 +164,7 @@ def check_describe(registry: ProviderRegistry) -> None:
         expect(set(under) == roles, f"{name} is registered under {sorted(under)}, expected {sorted(roles)}")
         proxy = next(iter(under.values()))
         expect(canonical(proxy.manifest.permissions) == canonical(permissions), f"{name}: the host describes it with {proxy.manifest.permissions}")
-        expect(proxy.manifest.provider_api_version == 5 and proxy.manifest.name == name, f"{name}: {proxy.manifest.provider_api_version}")
+        expect(proxy.manifest.provider_api_version == 6 and proxy.manifest.name == name, f"{name}: {proxy.manifest.provider_api_version}")
         state = provider_state(name)
         expect(state["state"] == "running", f"{name} is {state['state']}: {state.get('reason')}")
         expect(json.loads(to_json(permissions)) == state["declared"]["permissions"] == json.loads(to_json(proxy.manifest.permissions)),
@@ -222,11 +250,14 @@ def check_storage(registry: ProviderRegistry, provider_name: str, session: AuthS
     return {"bytes": len(audio), "listed": listed, "seek_bytes": None if seeked is None else len(seeked)}
 
 
-def check_local(registry: ProviderRegistry) -> None:
+def check_local(registry: ProviderRegistry, root_id: str) -> None:
     LIBRARY.mkdir(parents=True, exist_ok=True)
     LIBRARY.chmod(0o777)
-    set_setting("local", "root_dir", str(LIBRARY))
+    # The library is a folder setting (ADR-0008): the root folder and a path inside it. The host resolves it to an absolute
+    # path before each call and the gateway binds it into the sandbox, a mount of its own next to the working folder.
     storage = registry.get_storage_provider("local")
+    expect(storage.library_folder_setting() == "root_dir", f"the library folder setting: {storage.library_folder_setting()!r}")
+    set_setting("local", "root_dir", {"root_id": root_id, "path": LIBRARY.name})
     # Until the folder is granted the sandbox has none of it; the first call carries the grant (and restarts the sandbox).
     started = time.monotonic()
     outcome = check_storage(registry, "local", ANONYMOUS)
@@ -239,6 +270,10 @@ def check_local(registry: ProviderRegistry) -> None:
     on_host = (LIBRARY / "Host" / "Check" / "again.flac").read_bytes()
     expect(on_host == b"on the host", "the file written from the sandbox is not on the host")
     storage.delete("Host/Check/again.flac", ANONYMOUS)
+    # The workspace and the library are two mounts of the sandbox: the file crossed them by copy (rename fails with EXDEV),
+    # and the copy is atomic, so no hidden temporary file is left behind.
+    left = sorted(str(p.relative_to(LIBRARY)) for p in LIBRARY.rglob("*.part"))
+    expect(not left, f"temporary files left in the library: {left}")
     refused = provider_state("local").get("folders", {}).get("refused")
     expect(not refused, f"the gateway refused the folder: {refused}")
     say("LOCAL_OK", folder=str(LIBRARY), seconds=round(time.monotonic() - started, 1), **outcome)
@@ -248,7 +283,7 @@ def check_ftp(registry: ProviderRegistry) -> None:
     set_setting("ftp", "host", "ftp-server")
     set_setting("ftp", "port", "2121")
     set_setting("ftp", "remote_base_path", "/music")
-    session = AuthSession(flow=AuthFlow.CREDENTIALS, extra={"username": "musizerr", "password": "synthetic-password"})
+    session = AuthSession(flow=AuthFlow.CREDENTIALS, extra={"username": "musizeer", "password": "synthetic-password"})
     outcome = check_storage(registry, "ftp", session)
     say("FTP_OK", server="ftp-server:2121", **outcome)
 
@@ -345,10 +380,11 @@ def check_gateway() -> None:
 def main() -> None:
     init_db()
     registry = ProviderRegistry()
+    root_id = declare_roots()
     check_describe(registry)
     check_lyrics(registry)
     check_musicbrainz(registry)
-    check_local(registry)
+    check_local(registry, root_id)
     check_ftp(registry)
     check_acoustid(registry)
     check_youtube(registry)

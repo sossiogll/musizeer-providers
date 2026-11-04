@@ -22,15 +22,15 @@ from datetime import datetime
 import httpx
 import pytest
 
-import musizerr_provider_navidrome as module
+import musizeer_provider_navidrome as module
 from helpers import RemoteFailure, make_track, via_runner
-from musizerr_provider_navidrome import NavidromeProvider
-from musizerr_sdk.auth import AccountIdentity, AuthFlow, AuthSession
-from musizerr_sdk.capabilities import CAPABILITY_USER_LIBRARY
-from musizerr_sdk.context import StaticProviderContext
-from musizerr_sdk.errors import RemotePlaylistGone
-from musizerr_sdk.identifiers import ISRC, PROVIDER_ID
-from musizerr_sdk.manifest import build
+from musizeer_provider_navidrome import NavidromeProvider
+from musizeer_sdk.auth import AccountIdentity, AuthFlow, AuthSession
+from musizeer_sdk.capabilities import CAPABILITY_USER_LIBRARY
+from musizeer_sdk.context import StaticProviderContext
+from musizeer_sdk.errors import RemotePlaylistGone
+from musizeer_sdk.identifiers import ISRC, PROVIDER_ID
+from musizeer_sdk.manifest import build
 
 from subsonic import Subsonic, song, without_auth
 
@@ -339,7 +339,7 @@ def test_the_subsonic_credentials_are_a_salted_token_and_never_the_password(monk
     params = server.calls[0][1]
     assert params["u"] == "alice" and "p" not in params and "pw" not in params.values()
     assert params["t"] == hashlib.md5(("pw" + params["s"]).encode()).hexdigest()
-    assert (params["c"], params["f"]) == ("musizerr", "json")
+    assert (params["c"], params["f"]) == ("musizeer", "json")
 
 
 def test_the_stream_and_cover_urls_point_at_the_server_the_user_set():

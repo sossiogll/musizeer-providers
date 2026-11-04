@@ -1,10 +1,12 @@
 # FTP storage
 
-Keeps the library on an FTP server. A storage provider: Musizerr stores each downloaded file there, plays it
+Keeps the library on an FTP server. A storage provider: Musizeer stores each downloaded file there, plays it
 straight from the server and lists what is on it.
 
-- **Store** creates the folders it needs and uploads the file; **exists**, **size** and **delete** are what they say.
-- **Stream** hands Musizerr the bytes as they arrive from the server (the first note plays at once, not after the
+- **Store** creates the folders it needs and uploads the file under a hidden name (`.<name>.part`), then renames it
+  onto its final name, so the library never shows half a file (a server that will not rename onto an existing file
+  gets the old one removed first); **exists**, **size** and **delete** are what they say.
+- **Stream** hands Musizeer the bytes as they arrive from the server (the first note plays at once, not after the
   whole file), and a seek restarts the transfer at the offset (FTP `REST`): it declares `supports_stream_offset`.
 - **List** walks the base path (MLSD, or NLST on a server that does not know MLSD) so the library scan can find what
   is already there.
@@ -17,7 +19,7 @@ straight from the server and lists what is on it.
 | --- | --- |
 | `host` | The server's name or address. Required. |
 | `port` | The control port (default 21). |
-| `remote_base_path` | The folder of the library on the server, for example `/music`. Required. |
+| `remote_base_path` | The folder of the library on the server, for example `/music`. Required. It is a path in the server's own namespace, so it stays a plain text setting: it is not a folder of this machine and not one of the root folders of Musizeer. |
 
 The login (user and password) is the provider's credential, managed by an admin.
 
@@ -31,7 +33,7 @@ What the sandbox lets it do, and nothing else (the admin sees this before instal
   never be anything else, and loopback and link-local addresses are never reachable.
 
 No other network, no folders, no declared resource limits (the gateway's defaults apply). The library
-(`musizerr_sdk.net`) routes the sockets of `ftplib`, the control one and every passive data one, through the
+(`musizeer_sdk.net`) routes the sockets of `ftplib`, the control one and every passive data one, through the
 gateway's proxy; outside a sandbox that is the ordinary socket call.
 
 ## Build and test

@@ -1,6 +1,6 @@
 """LRCLIB: synced and plain lyrics from lrclib.net.
 
-A Musizerr provider that is its own package and its own image (see ``Dockerfile``):
+A Musizeer provider that is its own package and its own image (see ``Dockerfile``):
 it runs in a sandbox that reaches the network only at the destination it declares.
 """
 from __future__ import annotations
@@ -10,11 +10,11 @@ import re
 
 import httpx
 
-from musizerr_sdk.auth import AccountModel, AuthDefinition, AuthFlow, AuthSession
-from musizerr_sdk.interfaces import PROVIDER_API_VERSION, LyricsProvider
-from musizerr_sdk.models import LrcLine, Lyrics, Track
-from musizerr_sdk.permissions import Permissions
-from musizerr_sdk.settings import ProviderSetting
+from musizeer_sdk.auth import AccountModel, AuthDefinition, AuthFlow, AuthSession
+from musizeer_sdk.interfaces import PROVIDER_API_VERSION, LyricsProvider
+from musizeer_sdk.models import LrcLine, Lyrics, Track
+from musizeer_sdk.permissions import Permissions
+from musizeer_sdk.settings import ProviderSetting
 
 logger = logging.getLogger(__name__)
 

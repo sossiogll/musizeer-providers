@@ -13,8 +13,8 @@ from pathlib import PurePosixPath
 
 import pytest
 
-from musizerr_provider_ftp import FTPStorageProvider
-from musizerr_sdk.context import StaticProviderContext
+from musizeer_provider_ftp import FTPStorageProvider
+from musizeer_sdk.context import StaticProviderContext
 
 
 
