@@ -12,15 +12,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # The SDK the providers are built on, from the public Musizerr repository: scripts/test.sh installs it
-      # from MUSIZERR_SDK in each provider's throwaway container.
+      # The SDK the providers are built on, from the public Musizeer repository: scripts/test.sh installs it
+      # from MUSIZEER_SDK in each provider's throwaway container.
       - uses: actions/checkout@v4
         with:
-          repository: sossiogll/musizerr
-          path: .musizerr
+          repository: sossiogll/musizeer
+          # SDK 6 is on the integration branch of the 2.0 release until it is merged into master; then delete this line
+          # (the default branch is the one to build against).
+          ref: release/2.0
+          path: .musizeer
       - run: scripts/test.sh
         env:
-          MUSIZERR_SDK: .musizerr/sdk
+          MUSIZEER_SDK: .musizeer/sdk
 
   source-branch:
     name: master takes dev only
