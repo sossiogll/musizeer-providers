@@ -6,11 +6,11 @@ import logging
 from pathlib import Path, PurePosixPath
 from typing import Iterator
 
-from musizerr_sdk import net
-from musizerr_sdk.auth import AccountModel, AuthDefinition, AuthFlow, AuthSession
-from musizerr_sdk.interfaces import PROVIDER_API_VERSION, StorageProvider, StorageStreamResult, WorkspaceFile
-from musizerr_sdk.permissions import Permissions, TcpAccess
-from musizerr_sdk.settings import ProviderSetting
+from musizeer_sdk import net
+from musizeer_sdk.auth import AccountModel, AuthDefinition, AuthFlow, AuthSession
+from musizeer_sdk.interfaces import PROVIDER_API_VERSION, StorageProvider, StorageStreamResult, WorkspaceFile
+from musizeer_sdk.permissions import Permissions, TcpAccess
+from musizeer_sdk.settings import ProviderSetting
 
 logger = logging.getLogger(__name__)
 
@@ -104,20 +104,48 @@ class FTPStorageProvider(StorageProvider):
                 ftp.cwd(current)
 
     def store(self, source: WorkspaceFile, relative_dest: str, session: AuthSession) -> str:
+        """The file appears under its final name all at once, or not at all (``StorageProvider.store``): it is
+        uploaded to ``.<name>.part`` in its folder and renamed onto the final name, so a reader of the library (a music
+        server that scans while the upload runs) never sees half of it. A failed upload removes the part file."""
         config = self._get_config()
         remote = self._remote_path(relative_dest, config)
         remote_dir = str(PurePosixPath(remote).parent)
+        part = str(PurePosixPath(remote_dir) / f".{PurePosixPath(remote).name}{_PART_SUFFIX}")
 
         ftp = self._connect(session, config)
         try:
             self._mkdirs_remote(ftp, remote_dir)
-            with open(source.path, "rb") as f:
-                ftp.storbinary(f"STOR {remote}", f)
+            try:
+                with open(source.path, "rb") as f:
+                    ftp.storbinary(f"STOR {part}", f)
+                self._rename_onto(ftp, part, remote)
+            except BaseException:
+                self._discard(ftp, part)
+                raise
             logger.debug("FTP stored: %s -> %s", source.name, remote)
         finally:
             ftp.quit()
 
         return relative_dest
+
+    @staticmethod
+    def _rename_onto(ftp: ftplib.FTP, part: str, remote: str) -> None:
+        try:
+            ftp.rename(part, remote)
+        except ftplib.error_perm as refused:
+            # A server that will not rename onto a file that is already there: replace it.
+            try:
+                ftp.delete(remote)
+            except ftplib.error_perm:
+                raise refused from None
+            ftp.rename(part, remote)
+
+    @staticmethod
+    def _discard(ftp: ftplib.FTP, part: str) -> None:
+        try:
+            ftp.delete(part)
+        except (ftplib.all_errors, OSError):
+            pass  # nothing was uploaded, or the connection is gone: the next store of that name overwrites it
 
     def exists(self, relative_path: str, session: AuthSession) -> bool:
         config = self._get_config()
@@ -211,6 +239,8 @@ class FTPStorageProvider(StorageProvider):
 
 
 _CHUNK_BYTES = 64 * 1024
+# The temporary name of a file being uploaded is ``.<name>.part``: not an audio extension, so a scanner ignores it.
+_PART_SUFFIX = ".part"
 
 
 def _set_timeout(ftp: ftplib.FTP, seconds: int) -> None:
@@ -257,7 +287,7 @@ class _RemoteWalk:
             path = directory / name
             if is_dir:
                 yield from self.files(path)
-            else:
+            elif not (name.startswith(".") and name.endswith(_PART_SUFFIX)):  # a file still being uploaded is not there yet
                 yield path
 
     def _entries(self, directory: PurePosixPath) -> list[tuple[str, bool]]:

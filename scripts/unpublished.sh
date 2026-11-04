@@ -8,7 +8,7 @@
 #
 #   GHCR_NAMESPACE  where the images are (default ghcr.io/sossiogll)
 #
-# For each provider it asks the registry for <namespace>/musizerr-provider-<folder>:<version of its pyproject.toml>
+# For each provider it asks the registry for <namespace>/musizeer-provider-<folder>:<version of its pyproject.toml>
 # (`docker buildx imagetools inspect`; log in to the registry first to see private packages) and prints the folder of
 # each one that is not there, one per line. A provider folder is named after the provider (the name its image is
 # published under). A registry that answers "not found", or refuses access (a package that does not exist yet), counts
@@ -35,7 +35,7 @@ for provider in "$@"; do
   [ -f "$ROOT/$provider/Dockerfile" ] || { echo "$provider is not a provider folder of this repository" >&2; exit 2; }
   version=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$ROOT/$provider/pyproject.toml" | head -n 1)
   [ -n "$version" ] || { echo "cannot read the version from $provider/pyproject.toml" >&2; exit 2; }
-  image=$NAMESPACE/musizerr-provider-$provider
+  image=$NAMESPACE/musizeer-provider-$provider
   if digest=$(docker buildx imagetools inspect "$image:$version" --format "{{.Manifest.Digest}}" 2>"$TMP/error"); then
     pinned=$(jq -r --arg image "$image" '[.providers[] | select(.image == $image) | .digest][0] // empty' "$ROOT/catalog.json" 2>/dev/null || true)
     if [ -n "$digest" ] && [ "$digest" != "$pinned" ]; then

@@ -19,16 +19,16 @@ from __future__ import annotations
 import httpx
 import pytest
 
-import musizerr_provider_youtube as youtube_module
-from musizerr_sdk.auth import AuthSession
-from musizerr_sdk.capabilities import CAPABILITY_UNLIKE_SAVED_TRACK, CAPABILITY_USER_LIBRARY
-from musizerr_sdk.identifiers import PROVIDER_ID
-from musizerr_sdk.context import StaticProviderContext
-from musizerr_sdk.errors import ProviderRateLimited
-from musizerr_sdk.auth import BearerHeaderRequestAuth, RequestBodyClientAuth
-from musizerr_provider_youtube import YouTubeMetadataProvider, _artist_and_title, _duration_ms
-from musizerr_sdk.failures import classify_exception
-from musizerr_sdk.manifest import build
+import musizeer_provider_youtube as youtube_module
+from musizeer_sdk.auth import AuthSession
+from musizeer_sdk.capabilities import CAPABILITY_UNLIKE_SAVED_TRACK, CAPABILITY_USER_LIBRARY
+from musizeer_sdk.identifiers import PROVIDER_ID
+from musizeer_sdk.context import StaticProviderContext
+from musizeer_sdk.errors import ProviderRateLimited
+from musizeer_sdk.auth import BearerHeaderRequestAuth, RequestBodyClientAuth
+from musizeer_provider_youtube import YouTubeMetadataProvider, _artist_and_title, _duration_ms
+from musizeer_sdk.failures import classify_exception
+from musizeer_sdk.manifest import build
 
 from helpers import declared_capabilities, fetch_all_saved_tracks, make_track, via_runner
 

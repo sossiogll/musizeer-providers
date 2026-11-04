@@ -8,6 +8,7 @@ raw TCP to the host on any port.
 """
 from __future__ import annotations
 
+import ftplib
 import socket
 import socketserver
 import threading
@@ -17,11 +18,11 @@ from pyftpdlib.authorizers import DummyAuthorizer
 from pyftpdlib.handlers import FTPHandler
 from pyftpdlib.servers import FTPServer
 
-from musizerr_provider_ftp import FTPStorageProvider
-from musizerr_sdk import net
-from musizerr_sdk.auth import AuthFlow, AuthSession
-from musizerr_sdk.context import StaticProviderContext
-from musizerr_sdk.interfaces import WorkspaceFile
+from musizeer_provider_ftp import FTPStorageProvider
+from musizeer_sdk import net
+from musizeer_sdk.auth import AuthFlow, AuthSession
+from musizeer_sdk.context import StaticProviderContext
+from musizeer_sdk.interfaces import WorkspaceFile
 
 SESSION = AuthSession(flow=AuthFlow.CREDENTIALS, extra={"username": "user", "password": "synthetic-password"})
 AUDIO = bytes(range(256)) * 512  # 128 KiB
@@ -225,3 +226,94 @@ def test_exists_on_a_server_that_answers_size_in_ascii_mode(server):
 
     assert _provider(port).exists("song.flac", SESSION) is True
     assert _provider(port).exists("nothing.flac", SESSION) is False
+
+
+# ------------------------------------------------------------------
+# store() is atomic: the upload goes to a hidden .part name and is renamed onto the final one
+# ------------------------------------------------------------------
+
+
+def _remote_names(directory):
+    return sorted(path.name for path in directory.iterdir())
+
+
+def test_a_file_is_uploaded_as_a_hidden_part_file_and_renamed_onto_its_final_name(server, tmp_path, monkeypatch):
+    port, remote = server
+    album = remote / "music" / "Artist" / "Album"
+    seen = {}
+    real_store = ftplib.FTP.storbinary
+
+    def store_then_look(self, cmd, fp, *args, **kwargs):
+        reply = real_store(self, cmd, fp, *args, **kwargs)
+        seen["after_upload"] = _remote_names(album)  # the final name is not there while the bytes are uploaded
+        return reply
+
+    monkeypatch.setattr(ftplib.FTP, "storbinary", store_then_look)
+    work = tmp_path / "work"
+    work.mkdir()
+
+    _provider(port).store(_workspace_file(work, "song.flac", AUDIO), "Artist/Album/01 song.flac", SESSION)
+
+    assert seen["after_upload"] == [".01 song.flac.part"]
+    assert _remote_names(album) == ["01 song.flac"]
+    assert (album / "01 song.flac").read_bytes() == AUDIO
+
+
+def test_storing_a_file_that_is_already_there_replaces_it(server, tmp_path):
+    port, remote = server
+    work = tmp_path / "work"
+    work.mkdir()
+    provider = _provider(port)
+
+    provider.store(_workspace_file(work, "a.flac", b"old"), "Artist/01 song.flac", SESSION)
+    provider.store(_workspace_file(work, "b.flac", AUDIO), "Artist/01 song.flac", SESSION)
+
+    assert _remote_names(remote / "music" / "Artist") == ["01 song.flac"]
+    assert (remote / "music" / "Artist" / "01 song.flac").read_bytes() == AUDIO
+
+
+def test_on_a_server_that_will_not_rename_onto_an_existing_file_the_old_one_is_replaced(server, tmp_path, monkeypatch):
+    port, remote = server
+    real_rename = ftplib.FTP.rename
+
+    def strict_rename(self, fromname, toname):
+        if (remote / toname.lstrip("/")).exists():
+            raise ftplib.error_perm("550 Cannot rename onto an existing file")
+        return real_rename(self, fromname, toname)
+
+    work = tmp_path / "work"
+    work.mkdir()
+    provider = _provider(port)
+    provider.store(_workspace_file(work, "a.flac", b"old"), "Artist/01 song.flac", SESSION)
+    monkeypatch.setattr(ftplib.FTP, "rename", strict_rename)
+
+    provider.store(_workspace_file(work, "b.flac", AUDIO), "Artist/01 song.flac", SESSION)
+
+    assert _remote_names(remote / "music" / "Artist") == ["01 song.flac"]
+    assert (remote / "music" / "Artist" / "01 song.flac").read_bytes() == AUDIO
+
+
+def test_a_failed_upload_leaves_neither_the_final_name_nor_a_part_file(server, tmp_path, monkeypatch):
+    port, remote = server
+
+    def refuse(self, fromname, toname):
+        raise ftplib.error_perm("550 Permission denied")
+
+    monkeypatch.setattr(ftplib.FTP, "rename", refuse)
+    work = tmp_path / "work"
+    work.mkdir()
+
+    with pytest.raises(ftplib.error_perm, match="Permission denied"):
+        _provider(port).store(_workspace_file(work, "song.flac", AUDIO), "Artist/01 song.flac", SESSION)
+
+    assert _remote_names(remote / "music" / "Artist") == []
+    assert (work / "song.flac").exists()  # a retry has the file
+
+
+def test_a_file_that_is_still_being_uploaded_is_not_listed(server):
+    port, remote = server
+    (remote / "music" / "Artist").mkdir()
+    (remote / "music" / "Artist" / "01 song.flac").write_bytes(b"x")
+    (remote / "music" / "Artist" / ".02 song.flac.part").write_bytes(b"xx")
+
+    assert sorted(_provider(port).list_files("", SESSION)) == ["Artist/01 song.flac"]

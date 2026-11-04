@@ -16,8 +16,8 @@ import ftplib
 from pathlib import PurePosixPath
 
 import pytest
-from musizerr_sdk.context import StaticProviderContext
-from musizerr_provider_ftp import FTPStorageProvider
+from musizeer_sdk.context import StaticProviderContext
+from musizeer_provider_ftp import FTPStorageProvider
 
 AUDIO = bytes(range(256)) * 1024  # 256 KiB
 BLOCK = 8192

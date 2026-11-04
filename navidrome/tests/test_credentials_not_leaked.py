@@ -14,12 +14,12 @@ import traceback
 import httpx
 import pytest
 
-import musizerr_provider_navidrome as module
+import musizeer_provider_navidrome as module
 from helpers import RemoteFailure, via_runner
-from musizerr_provider_navidrome import NavidromeProvider, _redact
-from musizerr_sdk.auth import AuthFlow, AuthSession
-from musizerr_sdk.context import StaticProviderContext
-from musizerr_sdk.failures import classify_exception
+from musizeer_provider_navidrome import NavidromeProvider, _redact
+from musizeer_sdk.auth import AuthFlow, AuthSession
+from musizeer_sdk.context import StaticProviderContext
+from musizeer_sdk.failures import classify_exception
 
 from subsonic import song
 
@@ -176,8 +176,8 @@ def test_through_the_runner_the_host_gets_the_same_kind_and_a_clean_message(monk
 
 
 @pytest.mark.parametrize("text, kept", [
-    ("Client error '401 Unauthorized' for url 'http://h:4533/rest/ping?u=alice&t=abc123&s=salt&v=1.16.1&c=musizerr&f=json'",
-     ["/rest/ping", "v=1.16.1", "c=musizerr", "f=json"]),
+    ("Client error '401 Unauthorized' for url 'http://h:4533/rest/ping?u=alice&t=abc123&s=salt&v=1.16.1&c=musizeer&f=json'",
+     ["/rest/ping", "v=1.16.1", "c=musizeer", "f=json"]),
     ("GET http://h/rest/stream?id=song-1&u=bob%40example.org&t=ff00&s=aa11 failed", ["id=song-1", "failed"]),
     ("http://h/rest/ping?p=enc:7061&u=a", ["/rest/ping"]),
     ("headers {'Authorization': 'Bearer sekret-token'}", ["headers"]),

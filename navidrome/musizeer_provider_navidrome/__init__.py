@@ -12,14 +12,14 @@ from urllib.parse import urlencode
 
 import httpx
 
-from musizerr_sdk.auth import AccountIdentity, AccountModel, AuthDefinition, AuthFlow, AuthSession
-from musizerr_sdk.errors import RemotePlaylistGone
-from musizerr_sdk.identifiers import ISRC, PROVIDER_ID, Identifier
-from musizerr_sdk.interfaces import PROVIDER_API_VERSION, MetadataProvider, SyncCandidate, SyncProvider
-from musizerr_sdk.models import Album, Artist, ArtistRef, LibraryItem, Track
-from musizerr_sdk.permissions import Permissions
-from musizerr_sdk.settings import ProviderSetting
-from musizerr_sdk.text import parse_bitrate, parse_sample_rate, strip_version_suffix
+from musizeer_sdk.auth import AccountIdentity, AccountModel, AuthDefinition, AuthFlow, AuthSession
+from musizeer_sdk.errors import RemotePlaylistGone
+from musizeer_sdk.identifiers import ISRC, PROVIDER_ID, Identifier
+from musizeer_sdk.interfaces import PROVIDER_API_VERSION, MetadataProvider, SyncCandidate, SyncProvider
+from musizeer_sdk.models import Album, Artist, ArtistRef, LibraryItem, Track
+from musizeer_sdk.permissions import Permissions
+from musizeer_sdk.settings import ProviderSetting
+from musizeer_sdk.text import parse_bitrate, parse_sample_rate, strip_version_suffix
 
 # Content-Type -> estensione, solo per dare al file temporaneo un suffisso
 # leggibile: ffmpeg/fpcalc riconoscono il formato dal CONTENUTO, non
@@ -184,7 +184,7 @@ class NavidromeProvider(MetadataProvider, SyncProvider):
             "t": token,
             "s": salt,
             "v": "1.16.1",
-            "c": "musizerr",
+            "c": "musizeer",
             "f": "json",
         }
 

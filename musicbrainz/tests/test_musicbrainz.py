@@ -15,12 +15,12 @@ from __future__ import annotations
 import httpx
 import pytest
 
-import musizerr_provider_musicbrainz as musicbrainz
+import musizeer_provider_musicbrainz as musicbrainz
 from helpers import Http, make_track, via_runner
-from musizerr_provider_musicbrainz import MusicBrainzMetadataProvider
-from musizerr_sdk.auth import AuthFlow, AuthSession
-from musizerr_sdk.context import StaticProviderContext
-from musizerr_sdk.identifiers import ISRC, MBID, PROVIDER_ID, Identifier
+from musizeer_provider_musicbrainz import MusicBrainzMetadataProvider
+from musizeer_sdk.auth import AuthFlow, AuthSession
+from musizeer_sdk.context import StaticProviderContext
+from musizeer_sdk.identifiers import ISRC, MBID, PROVIDER_ID, Identifier
 
 SESSION = AuthSession(flow=AuthFlow.NONE)
 AUTH = AuthSession.anonymous()
@@ -157,7 +157,7 @@ def test_every_request_identifies_the_application_with_a_user_agent(provider, mo
     artists = provider.search_artists("artist", SESSION)
 
     assert [(a.name, a.provider_id) for a in artists] == [("Artist", "a1")]
-    assert http.headers[0]["User-Agent"].startswith("Musizerr/")
+    assert http.headers[0]["User-Agent"].startswith("Musizeer/")
 
 
 def test_a_track_is_found_by_its_recording_and_release(provider, monkeypatch):

@@ -22,15 +22,15 @@ from __future__ import annotations
 import httpx
 import pytest
 
-import musizerr_provider_lidarr as lidarr_module
+import musizeer_provider_lidarr as lidarr_module
 from helpers import RemoteFailure, make_track, via_runner
-from musizerr_provider_lidarr import LidarrDownloadProvider, LidarrNotConfigured, LidarrRejected, LidarrUnreachable
-from musizerr_sdk import delegation as ds
-from musizerr_sdk.auth import AuthFlow, AuthSession
-from musizerr_sdk.context import StaticProviderContext
-from musizerr_sdk.errors import DelegateHoldsRelease, DownloadDelegated
-from musizerr_sdk.manifest import build
-from musizerr_sdk.models import Album
+from musizeer_provider_lidarr import LidarrDownloadProvider, LidarrNotConfigured, LidarrRejected, LidarrUnreachable
+from musizeer_sdk import delegation as ds
+from musizeer_sdk.auth import AuthFlow, AuthSession
+from musizeer_sdk.context import StaticProviderContext
+from musizeer_sdk.errors import DelegateHoldsRelease, DownloadDelegated
+from musizeer_sdk.manifest import build
+from musizeer_sdk.models import Album
 
 
 @pytest.fixture
@@ -341,7 +341,7 @@ class _FakeLidarrHTTP:
 @pytest.fixture
 def fake_lidarr(monkeypatch):
     fake = _FakeLidarrHTTP()
-    monkeypatch.setattr("musizerr_provider_lidarr.httpx.get", fake.get)
+    monkeypatch.setattr("musizeer_provider_lidarr.httpx.get", fake.get)
     return fake
 
 
@@ -557,7 +557,7 @@ def test_the_release_group_is_found_through_the_recording_search(monkeypatch):
     url, params, headers = seen[0]
     assert url == "https://musicbrainz.org/ws/2/recording" and params["fmt"] == "json"
     assert 'recording:"Tornado"' in params["query"] and 'release:"Weather"' in params["query"]
-    assert headers["User-Agent"].lower().startswith("musizerr/")
+    assert headers["User-Agent"].lower().startswith("musizeer/")
 
 
 # ======================================================================
@@ -575,7 +575,7 @@ def test_the_provider_without_a_url_does_nothing(session):
     assert provider.list_delegated_files("1", bare) == []
     assert provider.request_rescan(bare) is None
     with pytest.raises(LidarrNotConfigured, match="URL not configured"):  # a missing URL is a reason, not a silent None
-        provider.register_push_endpoint("http://musizerr/hook", bare)
+        provider.register_push_endpoint("http://musizeer/hook", bare)
     assert provider.validate_config({}) is False and provider.validate_config({"url": "http://lidarr:8686"}) is True
 
 
@@ -626,13 +626,13 @@ def _notifications(monkeypatch, existing: list[dict]) -> _Notifications:
 
 def test_registering_the_webhook_creates_the_connection_once_and_updates_it_after(monkeypatch, session):
     fake = _notifications(monkeypatch, [{"id": 3, "name": "someone else's"}])
-    assert _provider().register_push_endpoint("http://musizerr/hook", session) == "created"
+    assert _provider().register_push_endpoint("http://musizeer/hook", session) == "created"
     method, path, body = fake.writes[0]
-    assert (method, path, body["name"], body["implementation"]) == ("POST", "/notification", "musizerr", "Webhook")
-    assert {"name": "url", "value": "http://musizerr/hook"} in body["fields"]
+    assert (method, path, body["name"], body["implementation"]) == ("POST", "/notification", "musizeer", "Webhook")
+    assert {"name": "url", "value": "http://musizeer/hook"} in body["fields"]
 
-    fake = _notifications(monkeypatch, [{"id": 3, "name": "musizerr"}])
-    assert _provider().register_push_endpoint("http://musizerr/new-hook", session) == "updated"
+    fake = _notifications(monkeypatch, [{"id": 3, "name": "musizeer"}])
+    assert _provider().register_push_endpoint("http://musizeer/new-hook", session) == "updated"
     method, path, body = fake.writes[0]
     assert (method, path, body["id"]) == ("PUT", "/notification/3", 3)
 
@@ -645,7 +645,7 @@ def test_a_file_is_deleted_by_its_lidarr_id(monkeypatch, session):
         return httpx.Response(200, json={}, request=httpx.Request("DELETE", url))
 
     monkeypatch.setattr(lidarr_module.httpx, "delete", delete)
-    from musizerr_sdk.delegation import FileRef
+    from musizeer_sdk.delegation import FileRef
 
     assert _provider().delete_file(FileRef(path="/m/a.mp3", external_id="7"), session) is True
     assert deleted == [("http://fake-lidarr/api/v1/trackFile/7", {"X-Api-Key": "test-key"})]
@@ -858,7 +858,7 @@ def test_an_error_without_a_readable_body_says_the_status(monkeypatch, session):
 
 
 def test_a_refusal_when_updating_the_existing_connection_is_raised_too(monkeypatch, session):
-    fake = _lidarr_notifications(monkeypatch, listed=[{"id": 3, "name": "musizerr"}], write=(400, VALIDATION))
+    fake = _lidarr_notifications(monkeypatch, listed=[{"id": 3, "name": "musizeer"}], write=(400, VALIDATION))
 
     with pytest.raises(LidarrRejected, match="Unable to send test message"):
         _provider().register_push_endpoint(CALLBACK, session)

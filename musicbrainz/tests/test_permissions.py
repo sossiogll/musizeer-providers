@@ -6,14 +6,14 @@ from pathlib import Path
 
 import pytest
 
-import musizerr_provider_musicbrainz as module
-from musizerr_provider_musicbrainz import MusicBrainzMetadataProvider
-from musizerr_sdk.auth import AuthSession
-from musizerr_sdk.context import StaticProviderContext
-from musizerr_sdk.interfaces import PROVIDER_API_VERSION
-from musizerr_sdk.labels import LABEL_LABEL, declared_from_labels, labels_for
-from musizerr_sdk.manifest import build
-from musizerr_sdk.permissions import Permissions, canonical, from_json, to_json, validate
+import musizeer_provider_musicbrainz as module
+from musizeer_provider_musicbrainz import MusicBrainzMetadataProvider
+from musizeer_sdk.auth import AuthSession
+from musizeer_sdk.context import StaticProviderContext
+from musizeer_sdk.interfaces import PROVIDER_API_VERSION
+from musizeer_sdk.labels import LABEL_LABEL, declared_from_labels, labels_for
+from musizeer_sdk.manifest import build
+from musizeer_sdk.permissions import Permissions, canonical, from_json, to_json, validate
 
 from helpers import make_track
 from permissions_support import allowed, attempt, destination, record_http
@@ -21,7 +21,7 @@ from permissions_support import allowed, attempt, destination, record_http
 PROVIDER_DIR = Path(__file__).resolve().parent.parent
 SESSION = AuthSession.anonymous()
 # Written in the module but contacted by nobody: the address in the User-Agent that names the application.
-NOT_CONTACTED = {"https://github.com/musizerr/musizerr"}
+NOT_CONTACTED = {"https://github.com/sossiogll/musizeer"}
 
 
 @pytest.fixture
@@ -48,9 +48,9 @@ def test_the_permissions_survive_the_label_round_trip(provider):
 def test_the_dockerfile_agrees_with_the_provider():
     dockerfile = (PROVIDER_DIR / "Dockerfile").read_text()
 
-    assert re.search(r'org\.musizerr\.provider\.label="MusicBrainz"', dockerfile)
-    assert "musizerr-provider-base:5" in dockerfile
-    assert "musizerr_provider_musicbrainz:MusicBrainzMetadataProvider" in dockerfile
+    assert re.search(r'org\.musizeer\.provider\.label="MusicBrainz"', dockerfile)
+    assert "musizeer-provider-base:6" in dockerfile
+    assert "musizeer_provider_musicbrainz:MusicBrainzMetadataProvider" in dockerfile
     assert "org.opencontainers.image.description=" in dockerfile and "org.opencontainers.image.url=" in dockerfile
 
 

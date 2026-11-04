@@ -6,13 +6,13 @@ from pathlib import Path
 
 import pytest
 
-import musizerr_provider_local as module
-from musizerr_provider_local import LocalStorageProvider
-from musizerr_sdk.context import StaticProviderContext
-from musizerr_sdk.interfaces import PROVIDER_API_VERSION
-from musizerr_sdk.labels import LABEL_LABEL, declared_from_labels, labels_for
-from musizerr_sdk.manifest import build
-from musizerr_sdk.permissions import FilesystemAccess, Permissions, canonical, from_json, path_values, to_json, validate
+import musizeer_provider_local as module
+from musizeer_provider_local import LocalStorageProvider
+from musizeer_sdk.context import StaticProviderContext
+from musizeer_sdk.interfaces import PROVIDER_API_VERSION
+from musizeer_sdk.labels import LABEL_LABEL, declared_from_labels, labels_for
+from musizeer_sdk.manifest import build
+from musizeer_sdk.permissions import FilesystemAccess, Permissions, canonical, from_json, path_values, to_json, validate
 
 PROVIDER_DIR = Path(__file__).resolve().parent.parent
 PERMISSIONS = LocalStorageProvider.permissions
@@ -31,7 +31,9 @@ def test_the_permissions_are_the_library_folder_read_and_write_and_nothing_else(
 
 def test_the_setting_the_permissions_name_is_the_one_the_code_reads(provider):
     assert {setting.key for setting in provider.config_schema()} == {"root_dir"}
-    assert 'setting("root_dir")' in Path(module.__file__).read_text()
+    assert '_LIBRARY_SETTING = "root_dir"' in Path(module.__file__).read_text()
+    assert 'setting(_LIBRARY_SETTING)' in Path(module.__file__).read_text()
+    assert {setting.key: setting.type for setting in provider.config_schema()} == {"root_dir": "folder"}
     assert path_values(PERMISSIONS, {"root_dir": "/downloads"}) == {"root_dir": "/downloads"}
     assert path_values(PERMISSIONS, {}) == {}
 
@@ -48,9 +50,9 @@ def test_the_permissions_survive_the_label_round_trip(provider):
 def test_the_dockerfile_agrees_with_the_provider():
     dockerfile = (PROVIDER_DIR / "Dockerfile").read_text()
 
-    assert re.search(r'org\.musizerr\.provider\.label="Local Storage"', dockerfile)
-    assert "musizerr-provider-base:5" in dockerfile
-    assert "musizerr_provider_local:LocalStorageProvider" in dockerfile
+    assert re.search(r'org\.musizeer\.provider\.label="Local Storage"', dockerfile)
+    assert "musizeer-provider-base:6" in dockerfile
+    assert "musizeer_provider_local:LocalStorageProvider" in dockerfile
     assert "org.opencontainers.image.description=" in dockerfile and "org.opencontainers.image.url=" in dockerfile
 
 

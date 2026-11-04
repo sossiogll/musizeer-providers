@@ -1,9 +1,9 @@
-# Musizerr providers: license and additional terms
+# Musizeer providers: license and additional terms
 
-Copyright (C) 2026 Sossio Giallaurito and the Musizerr contributors.
+Copyright (C) 2026 Sossio Giallaurito and the Musizeer contributors.
 
-This repository is part of Musizerr, and everything in it is covered by the same license
-as Musizerr itself.
+This repository is part of Musizeer, and everything in it is covered by the same license
+as Musizeer itself.
 
 It is free software: you can redistribute it and/or modify it under the terms of the GNU
 Affero General Public License as published by the Free Software Foundation, either version
@@ -14,7 +14,7 @@ It is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
 even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU Affero General Public License for more details.
 
-The provider SDK (`musizerr-sdk`, in the `sdk/` folder of the main Musizerr repository),
+The provider SDK (`musizeer-sdk`, in the `sdk/` folder of the main Musizeer repository),
 which every provider here is built on, is licensed separately under the GNU Lesser General
 Public License, version 3 or later. These providers are not part of it: they are released
 under the AGPL, as stated above.
@@ -23,13 +23,13 @@ under the AGPL, as stated above.
 
 The following additional terms apply to this repository and to every work based on it, as
 permitted by section 7(b) and 7(c) of the GNU Affero General Public License version 3.
-They are the additional terms of Musizerr.
+They are the additional terms of Musizeer.
 
 1. **Attribution.** Every copy of this repository or of a work based on it, whether you
    convey it or let users interact with it remotely through a computer network, must
    preserve this attribution notice:
 
-   > Based on Musizerr — https://github.com/sossiogll/musizerr
+   > Based on Musizeer — https://github.com/sossiogll/musizeer
 
    The notice must appear:
 
@@ -43,8 +43,8 @@ They are the additional terms of Musizerr.
    everyone else can use.
 
 3. **Modified versions.** A modified version must be marked as different from the
-   original (section 7(c)). It must not be presented as Musizerr itself, nor as endorsed
-   by the Musizerr project. The attribution notice above is how it credits Musizerr.
+   original (section 7(c)). It must not be presented as Musizeer itself, nor as endorsed
+   by the Musizeer project. The attribution notice above is how it credits Musizeer.
 
 4. **Source for network users.** As section 13 of the license requires, a modified
    version that users interact with through a network must offer them its corresponding
