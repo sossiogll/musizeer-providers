@@ -1,6 +1,6 @@
 # YouTube (likes only)
 
-Imports the videos a user **liked** on YouTube and turns them into Musizerr favorites. A metadata provider
+Imports the videos a user **liked** on YouTube and turns them into Musizeer favorites. A metadata provider
 with no catalog:
 
 - it never searches, and has no albums, artists, charts or related tracks;
@@ -8,14 +8,14 @@ with no catalog:
 - it only reads the user's likes, and keeps the videos of the **Music** category (`categoryId` 10). Likes of any
   other category are ignored.
 
-An imported like becomes a favorite through the usual like matching in Musizerr: there is no ISRC on YouTube, so a
+An imported like becomes a favorite through the usual like matching in Musizeer: there is no ISRC on YouTube, so a
 like matches a library track by title, artist and duration. The decoration of a video title (`(Official Video)`,
 `[HD]`, `- Lyrics`, `(Video Ufficiale)`...) is ignored; a real version (live, remix, acoustic...) is not the
 original. The best results come from the auto-generated `Artist - Topic` uploads, whose duration is the track's:
 an official video with an intro or an outro is longer than the audio and, beyond the duration tolerance (3 seconds
 or 2%), does not match, so the like stays "liked elsewhere".
 
-With the personal setting `unlike_on_origin_providers` on, taking a favorite off in Musizerr also takes the like
+With the personal setting `unlike_on_origin_providers` on, taking a favorite off in Musizeer also takes the like
 off the video on YouTube.
 
 ## Settings
@@ -36,9 +36,9 @@ The deployment needs its own Google Cloud project: the YouTube Data API has no p
    after 7 days and every user would have to reconnect YouTube every week.
 4. **Create the OAuth client**: *APIs & Services → Credentials → Create credentials → OAuth client ID → Web
    application*. As **Authorized redirect URI** put the callback of this deployment, `<APP_BASE_URL>/auth/youtube/callback`
-   (`APP_BASE_URL` is the public address Musizerr is served from). Google accepts plain `http` only for
+   (`APP_BASE_URL` is the public address Musizeer is served from). Google accepts plain `http` only for
    `localhost`; the URI must match exactly, trailing slash included.
-5. In Musizerr, paste the **client ID** and **client secret** in the provider's *App* section; then each user
+5. In Musizeer, paste the **client ID** and **client secret** in the provider's *App* section; then each user
    connects their account.
 
 An app in production that Google has not verified shows each user a "Google hasn't verified this app" screen on
@@ -65,7 +65,7 @@ What the sandbox lets it do, and nothing else (the admin sees this before instal
 
 - reach `www.googleapis.com` on port 443 (HTTPS), the Data API.
 
-The Google sign-in pages (`accounts.google.com`, `oauth2.googleapis.com`) are visited by Musizerr itself when a user
+The Google sign-in pages (`accounts.google.com`, `oauth2.googleapis.com`) are visited by Musizeer itself when a user
 connects, not by the provider, so they are not in its permissions. No folders, no raw TCP, no declared resource
 limits (the gateway's defaults apply).
 

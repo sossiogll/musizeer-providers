@@ -20,7 +20,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from urllib.parse import urlsplit
 
-from musizerr_sdk.permissions import (
+from musizeer_sdk.permissions import (
     DEFAULT_PORTS,
     Permissions,
     is_wildcard,

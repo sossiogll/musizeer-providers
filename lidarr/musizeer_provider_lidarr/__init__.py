@@ -8,16 +8,16 @@ from urllib.parse import parse_qs, urlsplit
 
 import httpx
 
-from musizerr_sdk import delegation as ds
-from musizerr_sdk.auth import AccountModel, ApiKeyConfig, AuthDefinition, AuthFlow, AuthSession
-from musizerr_sdk.delegation import DelegationStatus, FileRef
-from musizerr_sdk.errors import DelegateHoldsRelease, DownloadDelegated
-from musizerr_sdk.identifiers import Identifier
-from musizerr_sdk.interfaces import PROVIDER_API_VERSION, DownloadProvider
-from musizerr_sdk.models import Album, Track
-from musizerr_sdk.permissions import Permissions
-from musizerr_sdk.settings import ProviderSetting
-from musizerr_sdk.text import LOSSLESS_CODECS, parse_bitrate, parse_sample_rate
+from musizeer_sdk import delegation as ds
+from musizeer_sdk.auth import AccountModel, ApiKeyConfig, AuthDefinition, AuthFlow, AuthSession
+from musizeer_sdk.delegation import DelegationStatus, FileRef
+from musizeer_sdk.errors import DelegateHoldsRelease, DownloadDelegated
+from musizeer_sdk.identifiers import Identifier
+from musizeer_sdk.interfaces import PROVIDER_API_VERSION, DownloadProvider
+from musizeer_sdk.models import Album, Track
+from musizeer_sdk.permissions import Permissions
+from musizeer_sdk.settings import ProviderSetting
+from musizeer_sdk.text import LOSSLESS_CODECS, parse_bitrate, parse_sample_rate
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ def _extract_album_id(payload: dict) -> int | None:
 
 
 _MB_BASE = "https://musicbrainz.org/ws/2"
-_MB_HEADERS = {"User-Agent": "musizerr/1.0 (https://github.com/sossiogll/musizerr)"}
+_MB_HEADERS = {"User-Agent": "musizeer/1.0 (https://github.com/sossiogll/musizeer)"}
 
 
 # ── MusicBrainz lookup ────────────────────────────────────────────────────────
@@ -164,7 +164,7 @@ _TOKEN_PARAM = re.compile(r"(?P<lead>[?&;]token=)[^&;#\s'\"<>]*", re.IGNORECASE)
 
 
 def _hide_callback(text: str, callback_url: str) -> str:
-    """``text`` without the callback URL's token. The URL carries the shared token of Musizerr's inbound webhook,
+    """``text`` without the callback URL's token. The URL carries the shared token of Musizeer's inbound webhook,
     and Lidarr (or httpx) may quote it back in a message: it never leaves this provider."""
     secrets = {value for value in parse_qs(urlsplit(callback_url).query).get("token", []) if value}
     for secret in secrets:
@@ -392,7 +392,7 @@ class _LidarrClient:
     # poter propagare "non ho potuto determinare lo stato" al chiamante
     # generico (workers.maintenance.reconcile_delegation) invece di far
     # finta che una risposta vuota significhi "nessun evento" — vedi la nota
-    # sul contratto in musizerr_sdk.interfaces.
+    # sul contratto in musizeer_sdk.interfaces.
 
     def album_by_foreign_id(self, foreign_album_id: str) -> dict | None:
         """L'album già in Lidarr con questo id esterno, None se non c'è (path
@@ -429,7 +429,7 @@ class _LidarrClient:
         """
         Elenco delle tracce Lidarr (titolo, durata, presenza file) per
         l'album — usato dal giudizio PER TRACCIA di poll_delegation (vedi il
-        contratto in musizerr_sdk.interfaces): non cattura LidarrUnreachable per
+        contratto in musizeer_sdk.interfaces): non cattura LidarrUnreachable per
         lo stesso motivo di track_files/album_status/queue_records/
         history_for_album, chiamate solo dal poll.
         """
@@ -555,7 +555,7 @@ class LidarrDownloadProvider(DownloadProvider):
 
     def poll_delegation(self, handle: str, session: AuthSession):
         """
-        Vedi il contratto in musizerr_sdk.interfaces: se Lidarr non risponde
+        Vedi il contratto in musizeer_sdk.interfaces: se Lidarr non risponde
         affatto (rete/timeout), le chiamate sottostanti (history_for_album/
         album_status/queue_records/tracks_for_album) sollevano
         LidarrUnreachable — qui NON viene catturata di proposito, si
@@ -717,9 +717,9 @@ class LidarrDownloadProvider(DownloadProvider):
 
     def register_push_endpoint(self, callback_url: str, session: AuthSession) -> str | None:
         """
-        Auto-registra musizerr come Connection (Webhook) dentro Lidarr.
+        Auto-registra musizeer come Connection (Webhook) dentro Lidarr.
         Idempotente: Lidarr rifiuta un secondo POST con lo stesso 'name', quindi
-        se la Connection "musizerr" esiste già la aggiorniamo (PUT) con l'URL
+        se la Connection "musizeer" esiste già la aggiorniamo (PUT) con l'URL
         corrente invece di duplicarla.
 
         Returns "created" or "updated". Raises when it did not work, with the reason: Lidarr tests the callback
@@ -737,7 +737,7 @@ class LidarrDownloadProvider(DownloadProvider):
             "onUpgrade": True,
             "onImportFailure": True,
             "onHealthIssue": False,
-            "name": "musizerr",
+            "name": "musizeer",
             "implementation": "Webhook",
             "configContract": "WebhookSettings",
             "fields": [
@@ -747,7 +747,7 @@ class LidarrDownloadProvider(DownloadProvider):
         }
         listed = client.notification_call("GET", "/notification", callback_url=callback_url)
         existing = next(
-            (n for n in (listed if isinstance(listed, list) else []) if isinstance(n, dict) and n.get("name") == "musizerr"),
+            (n for n in (listed if isinstance(listed, list) else []) if isinstance(n, dict) and n.get("name") == "musizeer"),
             None,
         )
         if existing:

@@ -66,7 +66,7 @@ notes() {
       "",
       (if ($lines | length) == 0 then "None: no network, no folder, no limit of its own." else $lines[] end),
       "",
-      "<details><summary>As the image declares them (<code>org.musizerr.provider.permissions</code>)</summary>",
+      "<details><summary>As the image declares them (<code>org.musizeer.provider.permissions</code>)</summary>",
       "",
       "```json"
   ' "$TMP/entry.json"

@@ -5,11 +5,11 @@ from typing import Any
 
 import httpx
 
-from musizerr_sdk import protocol
-from musizerr_sdk.context import StaticProviderContext
-from musizerr_sdk.identifiers import Identifier
-from musizerr_sdk.models import Track
-from musizerr_sdk.runner import ProviderRunner
+from musizeer_sdk import protocol
+from musizeer_sdk.context import StaticProviderContext
+from musizeer_sdk.identifiers import Identifier
+from musizeer_sdk.models import Track
+from musizeer_sdk.runner import ProviderRunner
 
 
 def make_track(

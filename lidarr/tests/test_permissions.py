@@ -6,17 +6,17 @@ from pathlib import Path
 
 import pytest
 
-import musizerr_provider_lidarr as module
+import musizeer_provider_lidarr as module
 from helpers import make_track
-from musizerr_provider_lidarr import LidarrDownloadProvider
-from musizerr_sdk.auth import AuthFlow, AuthSession
-from musizerr_sdk.context import StaticProviderContext
-from musizerr_sdk.delegation import FileRef
-from musizerr_sdk.interfaces import PROVIDER_API_VERSION
-from musizerr_sdk.labels import LABEL_LABEL, declared_from_labels, labels_for
-from musizerr_sdk.manifest import build
-from musizerr_sdk.models import Album
-from musizerr_sdk.permissions import Permissions, canonical, from_json, settings_targets, to_json, validate
+from musizeer_provider_lidarr import LidarrDownloadProvider
+from musizeer_sdk.auth import AuthFlow, AuthSession
+from musizeer_sdk.context import StaticProviderContext
+from musizeer_sdk.delegation import FileRef
+from musizeer_sdk.interfaces import PROVIDER_API_VERSION
+from musizeer_sdk.labels import LABEL_LABEL, declared_from_labels, labels_for
+from musizeer_sdk.manifest import build
+from musizeer_sdk.models import Album
+from musizeer_sdk.permissions import Permissions, canonical, from_json, settings_targets, to_json, validate
 
 from permissions_support import allowed, attempt, destination, record_http
 
@@ -24,7 +24,7 @@ PROVIDER_DIR = Path(__file__).resolve().parent.parent
 PERMISSIONS = LidarrDownloadProvider.permissions
 # Written in the module but contacted by nobody: the address in MusicBrainz' User-Agent that names the
 # application, and the example of a Lidarr address in the description of the `url` setting.
-NOT_CONTACTED = {"https://github.com/sossiogll/musizerr", "http://localhost:8686"}
+NOT_CONTACTED = {"https://github.com/sossiogll/musizeer", "http://localhost:8686"}
 LIDARR_URL = "http://lidarr.lan:8686"
 SESSION = AuthSession(flow=AuthFlow.API_KEY, params={"apikey": "k"}, extra={"url": LIDARR_URL})
 
@@ -58,9 +58,9 @@ def test_the_permissions_survive_the_label_round_trip(provider):
 def test_the_dockerfile_agrees_with_the_provider():
     dockerfile = (PROVIDER_DIR / "Dockerfile").read_text()
 
-    assert re.search(r'org\.musizerr\.provider\.label="Lidarr"', dockerfile)
-    assert "musizerr-provider-base:5" in dockerfile
-    assert "musizerr_provider_lidarr:LidarrDownloadProvider" in dockerfile
+    assert re.search(r'org\.musizeer\.provider\.label="Lidarr"', dockerfile)
+    assert "musizeer-provider-base:6" in dockerfile
+    assert "musizeer_provider_lidarr:LidarrDownloadProvider" in dockerfile
     assert "org.opencontainers.image.description=" in dockerfile and "org.opencontainers.image.url=" in dockerfile
 
 
@@ -85,7 +85,7 @@ def test_every_request_the_provider_makes_is_a_declared_destination(provider, mo
         lambda: provider.list_delegated_files("5", SESSION),
         lambda: provider.delete_file(FileRef(path="a", external_id="3"), SESSION),
         lambda: provider.request_rescan(SESSION),
-        lambda: provider.register_push_endpoint("http://musizerr/hook", SESSION),
+        lambda: provider.register_push_endpoint("http://musizeer/hook", SESSION),
     )
 
     hosts = {destination(url) for url in recorder.urls}

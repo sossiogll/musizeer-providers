@@ -4,16 +4,16 @@ from __future__ import annotations
 import httpx
 import pytest
 
-import musizerr_provider_lrclib as lrclib
-from musizerr_provider_lrclib import LrclibLyricsProvider, _parse_lrc, _to_lyrics
-from musizerr_sdk import protocol
-from musizerr_sdk.auth import AuthSession
-from musizerr_sdk.context import StaticProviderContext
-from musizerr_sdk.interfaces import PROVIDER_API_VERSION
-from musizerr_sdk.labels import declared_from_labels, labels_for
-from musizerr_sdk.manifest import build
-from musizerr_sdk.models import Lyrics, Track
-from musizerr_sdk.runner import ProviderRunner
+import musizeer_provider_lrclib as lrclib
+from musizeer_provider_lrclib import LrclibLyricsProvider, _parse_lrc, _to_lyrics
+from musizeer_sdk import protocol
+from musizeer_sdk.auth import AuthSession
+from musizeer_sdk.context import StaticProviderContext
+from musizeer_sdk.interfaces import PROVIDER_API_VERSION
+from musizeer_sdk.labels import declared_from_labels, labels_for
+from musizeer_sdk.manifest import build
+from musizeer_sdk.models import Lyrics, Track
+from musizeer_sdk.runner import ProviderRunner
 
 SESSION = AuthSession.anonymous()
 TRACK = Track(title="Song", artist="Artist", album="Album", duration_ms=201_000)

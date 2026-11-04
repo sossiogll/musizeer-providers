@@ -5,7 +5,7 @@ Music metadata from [MusicBrainz](https://musicbrainz.org), the open music encyc
 of the types album, single and EP) and find a recording by its ISRC. A recording that appears on several
 releases becomes one track per release (the id of a track is `recording::release`, on purpose).
 
-The universal identifiers it gives (the MusicBrainz id and the ISRC) are what lets Musizerr tell that a track of
+The universal identifiers it gives (the MusicBrainz id and the ISRC) are what lets Musizeer tell that a track of
 another catalog is the same recording.
 
 ## Settings

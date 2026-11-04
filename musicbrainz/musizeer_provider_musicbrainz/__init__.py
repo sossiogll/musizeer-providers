@@ -4,17 +4,17 @@ from typing import Any
 
 import httpx
 
-from musizerr_sdk.auth import AccountModel, AuthDefinition, AuthFlow, AuthSession
-from musizerr_sdk.identifiers import ISRC, MBID, PROVIDER_ID, Identifier
-from musizerr_sdk.interfaces import PROVIDER_API_VERSION, MetadataProvider
-from musizerr_sdk.models import Album, Artist, ArtistRef, Track
-from musizerr_sdk.permissions import Permissions
-from musizerr_sdk.settings import ProviderSetting
-from musizerr_sdk.text import parse_year
+from musizeer_sdk.auth import AccountModel, AuthDefinition, AuthFlow, AuthSession
+from musizeer_sdk.identifiers import ISRC, MBID, PROVIDER_ID, Identifier
+from musizeer_sdk.interfaces import PROVIDER_API_VERSION, MetadataProvider
+from musizeer_sdk.models import Album, Artist, ArtistRef, Track
+from musizeer_sdk.permissions import Permissions
+from musizeer_sdk.settings import ProviderSetting
+from musizeer_sdk.text import parse_year
 
 _BASE = "https://musicbrainz.org/ws/2"
 _RELEASE_GROUPS_PAGE = 100  # GET /release-group
-_HEADERS = {"User-Agent": "Musizerr/1.0 (https://github.com/musizerr/musizerr)"}
+_HEADERS = {"User-Agent": "Musizeer/1.0 (https://github.com/sossiogll/musizeer)"}
 
 
 class MusicBrainzMetadataProvider(MetadataProvider):

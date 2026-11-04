@@ -21,7 +21,7 @@ from typing import Any, Iterator
 
 import httpx
 
-from musizerr_sdk.auth import (
+from musizeer_sdk.auth import (
     AccountModel,
     AuthDefinition,
     AuthFlow,
@@ -30,14 +30,14 @@ from musizerr_sdk.auth import (
     OAuth2Config,
     RequestBodyClientAuth,
 )
-from musizerr_sdk.capabilities import CAPABILITY_UNLIKE_SAVED_TRACK
-from musizerr_sdk.errors import ProviderRateLimited
-from musizerr_sdk.identifiers import PROVIDER_ID, Identifier
-from musizerr_sdk.interfaces import PROVIDER_API_VERSION, MetadataProvider
-from musizerr_sdk.models import Track
-from musizerr_sdk.permissions import Permissions
-from musizerr_sdk.settings import ProviderSetting
-from musizerr_sdk.text import normalize, strip_video_noise
+from musizeer_sdk.capabilities import CAPABILITY_UNLIKE_SAVED_TRACK
+from musizeer_sdk.errors import ProviderRateLimited
+from musizeer_sdk.identifiers import PROVIDER_ID, Identifier
+from musizeer_sdk.interfaces import PROVIDER_API_VERSION, MetadataProvider
+from musizeer_sdk.models import Track
+from musizeer_sdk.permissions import Permissions
+from musizeer_sdk.settings import ProviderSetting
+from musizeer_sdk.text import normalize, strip_video_noise
 
 logger = logging.getLogger(__name__)
 

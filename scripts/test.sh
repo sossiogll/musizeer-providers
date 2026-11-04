@@ -7,11 +7,11 @@
 #
 # The provider SDK is installed from a path, not from PyPI:
 #
-#   MUSIZERR_SDK   the `sdk/` folder of a checkout of the main Musizerr repository.
-#                  Default: ../musizerr/sdk, relative to this repository (the two checkouts side by side).
+#   MUSIZEER_SDK   the `sdk/` folder of a checkout of the main Musizeer repository.
+#                  Default: ../musizeer/sdk, relative to this repository (the two checkouts side by side).
 #                  It is mounted read-only and copied inside the container, so nothing is written to it.
 #                  With no checkout (CI), the tests run in the base image of the providers, which already holds
-#                  the SDK it was published with (ghcr.io/sossiogll/musizerr-provider-base:5).
+#                  the SDK it was published with (ghcr.io/sossiogll/musizeer-provider-base:6).
 #   TEST_IMAGE     the image the tests run in (default python:3.12-slim, or the base image with no checkout).
 #                  The providers need Python 3.12.
 #
@@ -23,15 +23,15 @@ set -eu
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 die() { echo "$*" >&2; exit 2; }
-if [ -n "${MUSIZERR_SDK:-}" ] || [ -d "$ROOT/../musizerr/sdk/src/musizerr_sdk" ]; then
-  SDK_PATH=${MUSIZERR_SDK:-$ROOT/../musizerr/sdk}
-  [ -d "$SDK_PATH/src/musizerr_sdk" ] || die "MUSIZERR_SDK ($SDK_PATH) is not the sdk/ folder of the Musizerr repository"
+if [ -n "${MUSIZEER_SDK:-}" ] || [ -d "$ROOT/../musizeer/sdk/src/musizeer_sdk" ]; then
+  SDK_PATH=${MUSIZEER_SDK:-$ROOT/../musizeer/sdk}
+  [ -d "$SDK_PATH/src/musizeer_sdk" ] || die "MUSIZEER_SDK ($SDK_PATH) is not the sdk/ folder of the Musizeer repository"
   SDK_MOUNT="-v $(cd "$SDK_PATH" && pwd):/mnt/sdk:ro"
   IMAGE=${TEST_IMAGE:-python:3.12-slim}
 else
-  # No checkout of Musizerr: the base image of the providers holds the SDK.
+  # No checkout of Musizeer: the base image of the providers holds the SDK.
   SDK_MOUNT=""
-  IMAGE=${TEST_IMAGE:-ghcr.io/sossiogll/musizerr-provider-base:5}
+  IMAGE=${TEST_IMAGE:-ghcr.io/sossiogll/musizeer-provider-base:6}
 fi
 
 if [ $# -eq 0 ]; then

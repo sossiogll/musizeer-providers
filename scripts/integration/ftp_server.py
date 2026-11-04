@@ -13,7 +13,7 @@ HOME = Path("/srv/ftp")
 HOME.mkdir(parents=True, exist_ok=True)
 
 authorizer = DummyAuthorizer()
-authorizer.add_user("musizerr", "synthetic-password", str(HOME), perm="elradfmwMT")
+authorizer.add_user("musizeer", "synthetic-password", str(HOME), perm="elradfmwMT")
 FTPHandler.authorizer = authorizer
 FTPHandler.passive_ports = range(30000, 30101)
 FTPServer(("0.0.0.0", 2121), FTPHandler).serve_forever()

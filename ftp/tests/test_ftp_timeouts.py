@@ -10,11 +10,11 @@ transfer is not cut short.
 """
 from __future__ import annotations
 
-from musizerr_sdk.auth import AuthFlow, AuthSession
-from musizerr_sdk.context import StaticProviderContext
+from musizeer_sdk.auth import AuthFlow, AuthSession
+from musizeer_sdk.context import StaticProviderContext
 
-import musizerr_provider_ftp as ftp_module
-from musizerr_provider_ftp import FTPStorageProvider
+import musizeer_provider_ftp as ftp_module
+from musizeer_provider_ftp import FTPStorageProvider
 
 START_TIMEOUT = 3
 
