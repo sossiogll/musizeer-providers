@@ -381,7 +381,10 @@ class _LidarrClient:
                 "rootFolderPath": root_folder,
                 "tags": [],
             },
-            "addOptions": {"searchForNewAlbum": True},
+            # No search on add: Lidarr does not run it when the artist is already there (it only refreshes and
+            # scans the album). The provider asks for the search itself right after (``_dispatch_mbid``), so
+            # every delegation is a real search and there is never a second one.
+            "addOptions": {"searchForNewAlbum": False},
         }
         return self._post("/album", payload, conflict=LidarrAlbumExists)
 
@@ -412,10 +415,13 @@ class _LidarrClient:
             return result.get("records", []) or []
         return result if isinstance(result, list) else []
 
-    def history_for_album(self, album_id: int) -> list[dict]:
-        result = self._get("/history/album", {"albumId": album_id}, optional=True)
-        if isinstance(result, list):
-            return result
+    def history_for_album(self, album_id: int, artist_id: int | None) -> list[dict]:
+        """The history of one album: Lidarr serves it per artist (``/history/artist`` with ``albumId``; there is
+        no ``/history/album``). Without the artist's id, the latest page of the whole history, filtered here."""
+        if artist_id:
+            result = self._get("/history/artist", {"artistId": artist_id, "albumId": album_id})
+            if isinstance(result, list):
+                return result
         # fallback: history paginata filtrata lato client
         result = self._get("/history", {"pageSize": 100, "sortKey": "date", "sortDirection": "descending"})
         records = result.get("records", []) if isinstance(result, dict) else []
@@ -582,7 +588,7 @@ class LidarrDownloadProvider(DownloadProvider):
 
         # 1) history: esito definitivo (import riuscito / fallito) per
         # l'INTERO album.
-        history = client.history_for_album(album_id)
+        history = client.history_for_album(album_id, album.get("artistId") or (album.get("artist") or {}).get("id"))
         events = {h.get("eventType") for h in history}
         if events & {"downloadFailed"}:
             return DelegationStatus(state=ds.FAILED, detail="Lidarr download failed")
@@ -799,9 +805,14 @@ class LidarrDownloadProvider(DownloadProvider):
                 ) from None
             self._dispatch_existing(client, existing, mbid, track)
         if added:
-            logger.info("Lidarr: SUCCESS — album '%s' (MBID=%s) queued", album_title, mbid)
             # L'id interno dell'album è l'handle per la riconciliazione (poll_delegation).
             handle = str(added.get("id")) if added.get("id") else None
+            # The search is the delegation: without it Lidarr holds a monitored album nobody looks for. Refused or
+            # unreachable, it raises: the host retries, finds the album already there and asks for the search
+            # again (``search_delegated``).
+            if handle and client.command("AlbumSearch", albumIds=[int(handle)]) is None:
+                raise RuntimeError(f"Lidarr added album '{album_title}' but refused to search it")
+            logger.info("Lidarr: SUCCESS — album '%s' (MBID=%s) added, search triggered", album_title, mbid)
             raise DownloadDelegated(
                 provider=self.name,
                 details=[{"mbid": mbid, "album": album_title, "status": "queued"}],

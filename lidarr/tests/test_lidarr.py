@@ -52,8 +52,11 @@ TORNADO = make_track(title="Tornado", artist="Some Artist", album="Weather", dur
 
 class _Lidarr:
     def __init__(self, *, unreachable: set[str] = frozenset(), post_album_status: int = 201,
-                 listed_after_conflict: bool = True, post_album_body: dict | None = None) -> None:
+                 listed_after_conflict: bool = True, post_album_body: dict | None = None,
+                 command_status: int = 201) -> None:
         self.unreachable = set(unreachable)
+        self.command_status = command_status
+        self.bodies: list[tuple[str, dict | None]] = []
         self.post_album_body = post_album_body
         self.post_album_status = post_album_status
         self.listed_after_conflict = listed_after_conflict
@@ -85,6 +88,7 @@ class _Lidarr:
     def post(self, url, headers=None, json=None, timeout=None):
         path = self._path(url)
         self.posts.append(path)
+        self.bodies.append((path, json))
         if path in self.unreachable:
             raise httpx.ConnectError("timed out", request=httpx.Request("POST", url))
         if path == "/album":
@@ -92,7 +96,7 @@ class _Lidarr:
             self.album_added = True
             return httpx.Response(self.post_album_status, json=self.post_album_body or {"message": "This album has already been added."},
                                   request=httpx.Request("POST", url))
-        return httpx.Response(201, json={"id": 1}, request=httpx.Request("POST", url))
+        return httpx.Response(self.command_status, json={"id": 1}, request=httpx.Request("POST", url))
 
 
 @pytest.fixture
@@ -162,6 +166,28 @@ def test_a_new_album_is_delegated_with_the_lidarr_id_as_the_handle(install, sess
     assert delegated.value.details == [{"mbid": "rg-w", "album": "Weather", "status": "queued"}]
 
 
+def test_a_new_album_is_searched_right_after_it_is_added(install, session):
+    """Lidarr does not run ``searchForNewAlbum`` when the artist is already there (it only refreshes and scans
+    the album): the provider asks for the search itself, and only that one."""
+    fake = install(post_album_body={"id": 77, "title": "Weather"})
+
+    with pytest.raises(DownloadDelegated):
+        _provider().download_fuzzy(TORNADO, "/unused", session)
+
+    (added_path, added), (command_path, command) = fake.bodies
+    assert added_path == "/album" and added["addOptions"] == {"searchForNewAlbum": False}
+    assert (command_path, command) == ("/command", {"name": "AlbumSearch", "albumIds": [77]})
+
+
+def test_an_added_album_whose_search_is_refused_is_an_error_to_retry(install, session):
+    """Not a delegation: nobody would look for the album. The host retries, finds it already in Lidarr and asks
+    for the search again (``search_delegated``)."""
+    install(post_album_body={"id": 77, "title": "Weather"}, command_status=500)
+
+    with pytest.raises(RuntimeError, match="refused to search"):
+        _provider().download_fuzzy(TORNADO, "/unused", session)
+
+
 def test_a_delegation_travels_through_the_runner_as_the_contracts_own_exception(install, session, monkeypatch):
     install(post_album_body={"id": 77})
     monkeypatch.setattr(lidarr_module, "_find_release_group_mbid_for_album", lambda *a, **k: "rg-w")
@@ -213,7 +239,7 @@ class _FakeLidarr:
             f"/album/{HELD_ALBUM_ID}": self.album,
             "/track": self.tracks,
             "/queue": {"records": []},
-            "/history/album": [],
+            "/history/artist": [],
         }.get(path, [])
         return httpx.Response(200, json=data, request=httpx.Request("GET", url))
 
@@ -345,9 +371,13 @@ def fake_lidarr(monkeypatch):
     return fake
 
 
-def _album_payload(*, title="Album X", artist="Artist X", track_count=10, file_count=3):
+ARTIST_ID = 9
+
+
+def _album_payload(*, title="Album X", artist="Artist X", track_count=10, file_count=3, artist_id=ARTIST_ID):
     return {
         "title": title,
+        "artistId": artist_id,
         "artist": {"artistName": artist},
         "statistics": {"trackCount": track_count, "trackFileCount": file_count},
     }
@@ -367,7 +397,7 @@ def test_the_requested_track_has_a_file_in_an_incomplete_album_and_the_provider_
     fake_lidarr.set("/album/123", _album_payload(track_count=10, file_count=3))
     fake_lidarr.set("/track", _tracks_payload([("Requested Song", 200_000, True), ("Other Song", 180_000, False)]))
     fake_lidarr.set("/queue", {"records": []})
-    fake_lidarr.set("/history/album", [])
+    fake_lidarr.set("/history/artist", [])
 
     tracks = _provider().list_delegated_tracks("123", session)
 
@@ -415,7 +445,7 @@ def test_poll_delegation_never_invents_downloading_when_no_signal(fake_lidarr, s
     fake_lidarr.set("/album/123", _album_payload(track_count=10, file_count=0))
     fake_lidarr.set("/track", _tracks_payload([("Requested Song", 200_000, False)]))
     fake_lidarr.set("/queue", {"records": []})
-    fake_lidarr.set("/history/album", [])
+    fake_lidarr.set("/history/artist", [])
 
     status = _provider().poll_delegation("123", session)
 
@@ -431,7 +461,7 @@ def test_poll_delegation_reports_downloading_when_queue_item_genuinely_active(fa
     fake_lidarr.set("/queue", {"records": [
         {"albumId": 123, "trackedDownloadState": "downloading", "trackedDownloadStatus": "ok"},
     ]})
-    fake_lidarr.set("/history/album", [])
+    fake_lidarr.set("/history/artist", [])
 
     assert _provider().poll_delegation("123", session).state == ds.DOWNLOADING
 
@@ -447,21 +477,41 @@ def test_poll_delegation_judges_the_whole_album(fake_lidarr, session):
     """No track in the call: the historical behaviour at the level of the whole album."""
     fake_lidarr.set("/album/123", _album_payload(track_count=2, file_count=2))
     fake_lidarr.set("/queue", {"records": []})
-    fake_lidarr.set("/history/album", [])
+    fake_lidarr.set("/history/artist", [])
 
     assert _provider().poll_delegation("123", session).state == ds.DOWNLOADED
 
 
 def test_a_failed_download_in_the_history_is_failed(fake_lidarr, session):
     fake_lidarr.set("/album/123", _album_payload(track_count=2, file_count=0))
-    fake_lidarr.set("/history/album", [{"eventType": "downloadFailed"}])
+    fake_lidarr.set("/history/artist", [{"eventType": "downloadFailed"}])
 
+    assert _provider().poll_delegation("123", session).state == ds.FAILED
+
+
+def test_the_history_of_an_album_is_read_through_its_artist(fake_lidarr, session):
+    """Lidarr has no ``/history/album``: the history of one album is the artist's, narrowed by ``albumId``."""
+    asked = []
+    fake_lidarr.set("/album/123", _album_payload(track_count=2, file_count=0))
+    fake_lidarr.set("/history/artist", lambda params: asked.append(params) or [{"eventType": "downloadFailed"}])
+
+    assert _provider().poll_delegation("123", session).state == ds.FAILED
+    assert asked == [{"artistId": ARTIST_ID, "albumId": 123}]
+
+
+def test_without_the_artist_the_history_is_the_latest_page_filtered_by_album(fake_lidarr, session):
+    fake_lidarr.set("/album/123", _album_payload(track_count=2, file_count=0, artist_id=None))
+    fake_lidarr.set("/history", {"records": [{"albumId": 5, "eventType": "downloadFailed"},
+                                             {"albumId": 123, "eventType": "grabbed"}]})
+
+    assert _provider().poll_delegation("123", session).state != ds.FAILED
+    fake_lidarr.set("/history", {"records": [{"albumId": 123, "eventType": "downloadFailed"}]})
     assert _provider().poll_delegation("123", session).state == ds.FAILED
 
 
 def test_a_warning_about_files_that_already_exist_is_a_conflict(fake_lidarr, session):
     fake_lidarr.set("/album/123", _album_payload(track_count=2, file_count=0))
-    fake_lidarr.set("/history/album", [])
+    fake_lidarr.set("/history/artist", [])
     fake_lidarr.set("/queue", {"records": [{
         "albumId": 123, "trackedDownloadState": "importPending", "trackedDownloadStatus": "warning",
         "statusMessages": [{"title": "Import failed", "messages": ["Destination already exists"]}],
