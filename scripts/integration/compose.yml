@@ -1,6 +1,6 @@
 # The services of scripts/integration.sh, under its own compose project (mzp52). Nothing is published on a port the real
-# stack uses: the local registry is bound to 127.0.0.1:18800 and that is all. The gateway is built from the main Musizerr
-# repository (MUSIZERR_REPO, only read) and runs the way its development compose file runs it (docs/gateway.md there):
+# stack uses: the local registry is bound to 127.0.0.1:18800 and that is all. The gateway is built from the main Musizeer
+# repository (MUSIZEER_REPO, only read) and runs the way its development compose file runs it (docs/gateway.md there):
 # no capability, its own seccomp profile and the unconfined /proc a bubblewrap sandbox needs, no published port.
 services:
   oci-registry:
@@ -24,20 +24,18 @@ services:
   provider-gateway:
     image: mzp52-provider-gateway
     build:
-      context: ${MUSIZERR_REPO}
+      context: ${MUSIZEER_REPO}
       dockerfile: gateway/Dockerfile
       target: production
     user: "1000:1000"
     cap_drop: [ALL]
     security_opt:
-      - seccomp=${MUSIZERR_REPO}/gateway/seccomp/musizerr-gateway.json
+      - seccomp=${MUSIZEER_REPO}/gateway/seccomp/musizeer-gateway.json
       - systempaths=unconfined
     volumes:
-      - provider_sockets:/run/musizerr
-      - gateway_state:/var/lib/musizerr-gateway
-      - downloads:/downloads # the library root and the workspaces, the same volume the host's container mounts
-    environment:
-      GATEWAY_FILESYSTEM_ROOTS: /downloads # the folders a provider may be given a path inside of
+      - provider_sockets:/run/musizeer
+      - gateway_state:/var/lib/musizeer-gateway
+      - downloads:/downloads # the root folder and the working folder, the same volume the host's container mounts
 
   # A throwaway FTP server (pyftpdlib), passive mode, the data connection on a port of 30000-30100 that the SERVER picks.
   ftp-server:
