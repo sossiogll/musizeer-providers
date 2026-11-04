@@ -4,9 +4,9 @@
   "providers": [
     {
       "name": "lrclib",
-      "image": "ghcr.io/sossiogll/musizerr-provider-lrclib",
-      "digest": "sha256:23078bf32719633e3556b72d201ce3f6584ef64500c05e6c16e96d0a958dfb6a",
-      "provider_api_version": 5,
+      "image": "ghcr.io/sossiogll/musizeer-provider-lrclib",
+      "digest": "sha256:6c504102ef36e4ba39ac90a23b6e7477751e75956a9238601c318a61457abd81",
+      "provider_api_version": 6,
       "roles": [
         "lyrics"
       ],
@@ -29,9 +29,9 @@
     },
     {
       "name": "acoustid",
-      "image": "ghcr.io/sossiogll/musizerr-provider-acoustid",
-      "digest": "sha256:ff5ad89dd8d06cf49e37730025a8d75fa220ebb6ae7511d014af90e20a66a239",
-      "provider_api_version": 5,
+      "image": "ghcr.io/sossiogll/musizeer-provider-acoustid",
+      "digest": "sha256:dd0ea84db50032accb03a23167bf06e416cc4768ab8f26666a9d6e573a0990f2",
+      "provider_api_version": 6,
       "roles": [
         "identification"
       ],
@@ -54,15 +54,15 @@
     },
     {
       "name": "ftp",
-      "image": "ghcr.io/sossiogll/musizerr-provider-ftp",
-      "digest": "sha256:6417663dc113b9592fe4b4422dde6ba29a838778bc8f8bae2b0435328fdf480c",
-      "provider_api_version": 5,
+      "image": "ghcr.io/sossiogll/musizeer-provider-ftp",
+      "digest": "sha256:ca78279a85bf87d6b4fe78f0f35eff0de35888f973cfc448890c515695ea0bb4",
+      "provider_api_version": 6,
       "roles": [
         "storage"
       ],
       "label": "FTP Storage",
       "description": "Keeps the library on an FTP server (passive mode): store, stream with seek, list.",
-      "homepage": "https://github.com/sossiogll/musizerr-providers",
+      "homepage": "https://github.com/sossiogll/musizeer-providers",
       "permissions": {
         "egress": [],
         "egress_from_settings": [],
@@ -82,9 +82,9 @@
     },
     {
       "name": "lidarr",
-      "image": "ghcr.io/sossiogll/musizerr-provider-lidarr",
-      "digest": "sha256:cbf1f5e0fd66b8dd879340bdfe3e437412b6a940a50817a22731a2b65fc7693d",
-      "provider_api_version": 5,
+      "image": "ghcr.io/sossiogll/musizeer-provider-lidarr",
+      "digest": "sha256:96c6b757f601be92627fe7e0265779ced040119e1496ba63fa63be4729eab53f",
+      "provider_api_version": 6,
       "roles": [
         "download"
       ],
@@ -109,15 +109,15 @@
     },
     {
       "name": "local",
-      "image": "ghcr.io/sossiogll/musizerr-provider-local",
-      "digest": "sha256:eb729d69d195dbf34740ca63cfdfc636b09bcb90e2e901f4f1b2c6b88d905ae8",
-      "provider_api_version": 5,
+      "image": "ghcr.io/sossiogll/musizeer-provider-local",
+      "digest": "sha256:29c745f58ce2bc57b0657870c9e36dd5ef6641ef91329c7cf872c8c035abc61e",
+      "provider_api_version": 6,
       "roles": [
         "storage"
       ],
       "label": "Local Storage",
-      "description": "Keeps the library in a folder of the machine Musizerr runs on.",
-      "homepage": "https://github.com/sossiogll/musizerr-providers",
+      "description": "Keeps the library in a folder of the machine Musizeer runs on.",
+      "homepage": "https://github.com/sossiogll/musizeer-providers",
       "permissions": {
         "egress": [],
         "egress_from_settings": [],
@@ -137,9 +137,9 @@
     },
     {
       "name": "musicbrainz",
-      "image": "ghcr.io/sossiogll/musizerr-provider-musicbrainz",
-      "digest": "sha256:18d629c54a74864a933338636c235cf8df0695851f5124f3f2c82bc69451f2de",
-      "provider_api_version": 5,
+      "image": "ghcr.io/sossiogll/musizeer-provider-musicbrainz",
+      "digest": "sha256:d091f8e0083eda1d3a1dd02398de04fb24c34308e4f6b3c877995deb80a79740",
+      "provider_api_version": 6,
       "roles": [
         "metadata"
       ],
@@ -162,9 +162,9 @@
     },
     {
       "name": "navidrome",
-      "image": "ghcr.io/sossiogll/musizerr-provider-navidrome",
-      "digest": "sha256:c9162408caf7f9d4069e95d9fcfafcf6cf9a7f0aaa05cbd1ebe3e6fd7a7dc9a7",
-      "provider_api_version": 5,
+      "image": "ghcr.io/sossiogll/musizeer-provider-navidrome",
+      "digest": "sha256:235681f519f1c33f3f83ba9ef7e29a0c8f7df55352dcbdf0e41d9095da43c552",
+      "provider_api_version": 6,
       "roles": [
         "metadata",
         "sync"
@@ -188,9 +188,9 @@
     },
     {
       "name": "youtube",
-      "image": "ghcr.io/sossiogll/musizerr-provider-youtube",
-      "digest": "sha256:645a185a9d125865be9c1ecceac1dcab4190eda3aabba4f40903b50cbf618741",
-      "provider_api_version": 5,
+      "image": "ghcr.io/sossiogll/musizeer-provider-youtube",
+      "digest": "sha256:57d66fc264073720123ca30e49316db3dbd02513b080f841d4f321d8b1e3fd92",
+      "provider_api_version": 6,
       "roles": [
         "metadata"
       ],
