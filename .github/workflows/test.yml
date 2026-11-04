@@ -17,9 +17,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: sossiogll/musizeer
-          # SDK 6 is on the integration branch of the 2.0 release until it is merged into master; then delete this line
-          # (the default branch is the one to build against).
-          ref: release/2.0
           path: .musizeer
       - run: scripts/test.sh
         env:
