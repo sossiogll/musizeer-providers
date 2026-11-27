@@ -209,7 +209,9 @@ class _LidarrClient:
         # httpx e quindi nei log, e con esso la credenziale.
         return {"X-Api-Key": self._key}
 
-    def _get(self, path: str, params: dict | None = None, *, optional: bool = False) -> list | dict | None:
+    def _get(self, path: str, params: dict | None = None, *, optional: bool = False, strict: bool = False) -> list | dict | None:
+        """``strict``: a refusal of Lidarr (4xx/5xx) raises ``LidarrRejected`` instead of answering None, for a caller
+        that must not read "Lidarr said no" as "there is nothing" (where it imports, where it sees a folder)."""
         try:
             r = httpx.get(f"{self._base}{path}", params=params or None,
                           headers=self._headers, timeout=self._timeout)
@@ -217,6 +219,12 @@ class _LidarrClient:
             return r.json()
         except httpx.HTTPStatusError as exc:
             _unless_not_answered(exc, "GET", path)
+            if strict:
+                status = exc.response.status_code
+                message = (f"Lidarr refused the API key ({status})" if status in (401, 403)
+                           else f"Lidarr refused the request ({status}): {_lidarr_reason(exc.response)}")
+                logger.error("Lidarr GET %s: %s", path, message)
+                raise LidarrRejected(message, request=exc.request, response=exc.response) from None
             # Lidarr ha risposto, con un esito negativo (4xx/5xx) — non e'
             # un'irraggiungibilita', e' una risposta legittima (es. 404).
             # Un endpoint `optional` che non esiste in questa versione di
@@ -330,11 +338,36 @@ class _LidarrClient:
             return result[0].get("id", 1)
         return 1
 
+    def root_folders(self, *, strict: bool = True) -> list[str]:
+        """The folders Lidarr imports into (``/rootfolder``), as Lidarr names them, without a trailing ``/``.
+        Raises ``LidarrUnreachable`` when Lidarr does not answer, ``LidarrRejected`` when it refuses."""
+        result = self._get("/rootfolder", strict=strict)
+        roots: list[str] = []
+        for entry in result if isinstance(result, list) else []:
+            path = entry.get("path") if isinstance(entry, dict) else None
+            if not isinstance(path, str):
+                continue
+            path = path.rstrip("/") or ("/" if path.startswith("/") else "")
+            if path and path not in roots:
+                roots.append(path)
+        return roots
+
+    def directory_in(self, root: str, name: str) -> str | None:
+        """The path of the folder called ``name`` directly inside ``root``, by Lidarr's filesystem browser; None
+        when it is not there. Raises ``LidarrUnreachable`` when Lidarr does not answer, ``LidarrRejected`` when it
+        refuses."""
+        result = self._get("/filesystem", {"path": root, "includeFiles": "false",
+                                           "allowFoldersWithoutTrailingSlashes": "true"}, strict=True)
+        directories = result.get("directories") if isinstance(result, dict) else None
+        for entry in directories if isinstance(directories, list) else []:
+            if isinstance(entry, dict) and entry.get("name") == name and isinstance(entry.get("path"), str):
+                return entry["path"].rstrip("/") or "/"
+        return None
+
     def _first_root_folder(self) -> str:
-        result = self._get("/rootfolder")
-        if isinstance(result, list) and result:
-            return result[0].get("path", "/music")
-        return "/music"
+        # The dispatch keeps its old behaviour: a refused listing falls back to Lidarr's usual folder.
+        roots = self.root_folders(strict=False)
+        return roots[0] if roots else "/music"
 
     # Il path di DISPATCH (search_by_mbid, album_by_foreign_id, add_album)
     # NON cattura LidarrUnreachable: un Lidarr che non risponde non dice che
@@ -874,6 +907,29 @@ class LidarrDownloadProvider(DownloadProvider):
             details=[{"mbid": mbid, "album": album_title, "status": "search_triggered"}],
             handle=str(album_id),
         )
+
+    def supports_import_roots(self) -> bool:
+        return True
+
+    def supports_locate_in_import_roots(self) -> bool:
+        return True
+
+    def list_import_roots(self, session: AuthSession) -> list[str]:
+        client = self._client(session)
+        return client.root_folders() if client else []
+
+    def locate_in_import_roots(self, name: str, session: AuthSession) -> str | None:
+        # A name that could leave the root (or is not a name) never reaches Lidarr's file browser.
+        if not name or "/" in name or "\0" in name or name in (".", ".."):
+            return None
+        client = self._client(session)
+        if client is None:
+            return None
+        for root in client.root_folders():
+            found = client.directory_in(root, name)
+            if found:
+                return found
+        return None
 
     def _client(self, session: AuthSession) -> _LidarrClient | None:
         url = session.extra.get("url", "").strip()
