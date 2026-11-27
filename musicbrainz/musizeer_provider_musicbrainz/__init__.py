@@ -1,10 +1,15 @@
 """MusicBrainz: the open music encyclopedia, as a metadata provider (search, lookups, discography, ISRC)."""
 from __future__ import annotations
-from typing import Any
+
+import math
+import threading
+import time
+from typing import Any, Callable
 
 import httpx
 
 from musizeer_sdk.auth import AccountModel, AuthDefinition, AuthFlow, AuthSession
+from musizeer_sdk.errors import ProviderRateLimited
 from musizeer_sdk.identifiers import ISRC, MBID, PROVIDER_ID, Identifier
 from musizeer_sdk.interfaces import PROVIDER_API_VERSION, MetadataProvider
 from musizeer_sdk.models import Album, Artist, ArtistRef, Track
@@ -15,6 +20,39 @@ from musizeer_sdk.text import parse_year
 _BASE = "https://musicbrainz.org/ws/2"
 _RELEASE_GROUPS_PAGE = 100  # GET /release-group
 _HEADERS = {"User-Agent": "Musizeer/1.0 (https://github.com/sossiogll/musizeer)"}
+# MusicBrainz asks every client for at most one request per second, and refuses (503) the ones that send more.
+_MIN_INTERVAL_S = 1.0
+
+
+class _Pace:
+    """One request per ``interval`` seconds for the whole process, whichever thread asks: each call reserves the next
+    free slot and waits for it. A slot further away than ``max_wait`` is refused at once (``ProviderRateLimited``, with
+    how long to wait), so a queue of calls never waits without a bound."""
+
+    def __init__(
+        self, interval: float, clock: Callable[[], float] = time.monotonic, sleep: Callable[[float], None] = time.sleep,
+    ) -> None:
+        self._interval = interval
+        self._clock = clock
+        self._sleep = sleep
+        self._lock = threading.Lock()
+        self._next = 0.0
+
+    def wait(self, max_wait: float) -> None:
+        with self._lock:
+            now = self._clock()
+            slot = max(now, self._next)
+            delay = slot - now
+            if delay > max_wait:
+                raise ProviderRateLimited(
+                    "MusicBrainz takes one request per second: too many are waiting", retry_after=math.ceil(delay),
+                )
+            self._next = slot + self._interval
+        if delay > 0:
+            self._sleep(delay)
+
+
+_PACE = _Pace(_MIN_INTERVAL_S)
 
 
 class MusicBrainzMetadataProvider(MetadataProvider):
@@ -26,9 +64,14 @@ class MusicBrainzMetadataProvider(MetadataProvider):
     # Public service: no account, whoever the viewer.
     auth = AuthDefinition(flow=AuthFlow.NONE, account_model=AccountModel.NONE)
 
+    def _get(self, url: str, **kwargs: Any) -> httpx.Response:
+        """Every request to MusicBrainz, at its pace: waits for a free slot, at most the HTTP timeout."""
+        _PACE.wait(self.context.http_timeout)
+        return httpx.get(url, **kwargs)
+
     def test_connection(self, session: AuthSession) -> str | None:
         try:
-            resp = httpx.get(
+            resp = self._get(
                 f"{_BASE}/artist",
                 params={"query": "test", "limit": 1, "fmt": "json"},
                 headers=_HEADERS,
@@ -58,7 +101,7 @@ class MusicBrainzMetadataProvider(MetadataProvider):
             "limit": limit,
             "fmt": "json",
         }
-        resp = httpx.get(f"{_BASE}/recording", params=params, headers=_HEADERS, timeout=self.context.http_timeout)
+        resp = self._get(f"{_BASE}/recording", params=params, headers=_HEADERS, timeout=self.context.http_timeout)
         resp.raise_for_status()
         data = resp.json()
 
@@ -69,7 +112,7 @@ class MusicBrainzMetadataProvider(MetadataProvider):
 
     def search_albums(self, query: str, session: AuthSession, limit: int = 20) -> list[Album]:
         params = {"query": query, "limit": limit, "fmt": "json"}
-        resp = httpx.get(f"{_BASE}/release", params=params, headers=_HEADERS, timeout=self.context.http_timeout)
+        resp = self._get(f"{_BASE}/release", params=params, headers=_HEADERS, timeout=self.context.http_timeout)
         resp.raise_for_status()
         data = resp.json()
 
@@ -82,7 +125,7 @@ class MusicBrainzMetadataProvider(MetadataProvider):
 
     def search_artists(self, query: str, session: AuthSession, limit: int = 20) -> list[Artist]:
         params = {"query": query, "limit": limit, "fmt": "json"}
-        resp = httpx.get(f"{_BASE}/artist", params=params, headers=_HEADERS, timeout=self.context.http_timeout)
+        resp = self._get(f"{_BASE}/artist", params=params, headers=_HEADERS, timeout=self.context.http_timeout)
         resp.raise_for_status()
         data = resp.json()
 
@@ -98,7 +141,7 @@ class MusicBrainzMetadataProvider(MetadataProvider):
 
     def find_by_isrc(self, isrc: str, session: AuthSession) -> Track | None:
         # inc=recordings non è valido per l'endpoint /isrc/ (restituisce già recordings di default)
-        resp = httpx.get(
+        resp = self._get(
             f"{_BASE}/isrc/{isrc}",
             params={"fmt": "json", "inc": "artist-credits+releases"},
             headers=_HEADERS,
@@ -125,7 +168,7 @@ class MusicBrainzMetadataProvider(MetadataProvider):
         if not recording_id:
             return []
         params = {"inc": "isrcs+artist-credits+releases", "fmt": "json"}
-        resp = httpx.get(f"{_BASE}/recording/{recording_id}", params=params, headers=_HEADERS, timeout=self.context.http_timeout)
+        resp = self._get(f"{_BASE}/recording/{recording_id}", params=params, headers=_HEADERS, timeout=self.context.http_timeout)
         if resp.status_code == 404:
             return []
         resp.raise_for_status()
@@ -142,7 +185,7 @@ class MusicBrainzMetadataProvider(MetadataProvider):
     def get_track(self, provider_id: str, session: AuthSession) -> Track | None:
         recording_id, release_id = self._parse_track_provider_id(provider_id)
         params = {"inc": "isrcs+artist-credits+releases", "fmt": "json"}
-        resp = httpx.get(f"{_BASE}/recording/{recording_id}", params=params, headers=_HEADERS, timeout=self.context.http_timeout)
+        resp = self._get(f"{_BASE}/recording/{recording_id}", params=params, headers=_HEADERS, timeout=self.context.http_timeout)
         if resp.status_code == 404:
             return None
         resp.raise_for_status()
@@ -153,7 +196,7 @@ class MusicBrainzMetadataProvider(MetadataProvider):
 
     def get_artist(self, provider_id: str, session: AuthSession) -> Artist | None:
         params = {"fmt": "json"}
-        resp = httpx.get(f"{_BASE}/artist/{provider_id}", params=params, headers=_HEADERS, timeout=self.context.http_timeout)
+        resp = self._get(f"{_BASE}/artist/{provider_id}", params=params, headers=_HEADERS, timeout=self.context.http_timeout)
         if resp.status_code == 404:
             return None
         resp.raise_for_status()
@@ -174,7 +217,7 @@ class MusicBrainzMetadataProvider(MetadataProvider):
                 "offset": offset,
                 "fmt": "json",
             }
-            resp = httpx.get(f"{_BASE}/release-group", params=params, headers=_HEADERS, timeout=self.context.http_timeout)
+            resp = self._get(f"{_BASE}/release-group", params=params, headers=_HEADERS, timeout=self.context.http_timeout)
             resp.raise_for_status()
             data = resp.json()
             groups = data.get("release-groups", [])
@@ -206,13 +249,13 @@ class MusicBrainzMetadataProvider(MetadataProvider):
 
     def get_album(self, provider_id: str, session: AuthSession) -> Album | None:
         params = {"inc": "recordings+artist-credits", "fmt": "json"}
-        resp = httpx.get(f"{_BASE}/release/{provider_id}", params=params, headers=_HEADERS, timeout=self.context.http_timeout)
+        resp = self._get(f"{_BASE}/release/{provider_id}", params=params, headers=_HEADERS, timeout=self.context.http_timeout)
         if resp.status_code == 200:
             return self._release_to_album(resp.json(), include_tracks=True)
         if resp.status_code != 404:
             resp.raise_for_status()
         # Fallback: provider_id potrebbe essere un release-group ID (da get_artist_albums)
-        rg_resp = httpx.get(
+        rg_resp = self._get(
             f"{_BASE}/release-group/{provider_id}",
             params={"inc": "releases+artist-credits", "fmt": "json"},
             headers=_HEADERS,
@@ -225,7 +268,7 @@ class MusicBrainzMetadataProvider(MetadataProvider):
         if not releases:
             return None
         release_id = releases[0]["id"]
-        rel_resp = httpx.get(f"{_BASE}/release/{release_id}", params=params, headers=_HEADERS, timeout=self.context.http_timeout)
+        rel_resp = self._get(f"{_BASE}/release/{release_id}", params=params, headers=_HEADERS, timeout=self.context.http_timeout)
         if rel_resp.status_code == 404:
             return None
         rel_resp.raise_for_status()
