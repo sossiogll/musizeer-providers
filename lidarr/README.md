@@ -18,6 +18,9 @@ track belongs to, and follows the import until the files are in the library.
   answer. The callback address must be reachable **from Lidarr**: with both in the same Docker network, use an
   internal URL such as `http://frontend` as Musizeer's public URL. The callback token is never shown in a message or
   a log.
+- It tells Musizeer which folders Lidarr imports into (its root folders) and, asked for a folder by name, where
+  Lidarr sees it inside one of them (through Lidarr's file browser). Musizeer uses this to map Lidarr's root folder
+  (for example `/music`) to its own library folder.
 - It is a last-resort provider and **off by default** (`enabled_by_default = False`).
 
 ## Settings

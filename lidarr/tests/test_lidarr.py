@@ -979,3 +979,104 @@ def test_a_registration_that_worked_still_travels_as_its_outcome_word(monkeypatc
     _lidarr_notifications(monkeypatch, write=(201, {"id": 9}))
 
     assert via_runner(LidarrDownloadProvider, "register_push_endpoint", CALLBACK, session, provider_name="lidarr") == "created"
+
+
+# ======================================================================
+# Import roots: where Lidarr imports, and where it sees a folder of Musizeer's
+# ======================================================================
+
+class _Folders:
+    """A Lidarr with root folders and a file browser: ``browse`` maps a root to the answer of ``/filesystem`` for it."""
+
+    def __init__(self, roots, browse: dict | None = None, *, unreachable: bool = False, status: int = 200) -> None:
+        self.roots, self.browse, self.unreachable, self.status = roots, browse or {}, unreachable, status
+        self.calls: list[tuple[str, dict | None]] = []
+
+    def get(self, url, params=None, headers=None, timeout=None):
+        path = url.split("/api/v1", 1)[1]
+        self.calls.append((path, params))
+        if self.unreachable:
+            raise httpx.ConnectError("timed out", request=httpx.Request("GET", url))
+        body = self.roots if path == "/rootfolder" else self.browse.get(params["path"], {})
+        if self.status != 200:
+            body = {"message": "Unauthorized"}
+        return httpx.Response(self.status, json=body, request=httpx.Request("GET", url))
+
+
+def _folders(monkeypatch, roots, browse=None, **kwargs) -> _Folders:
+    fake = _Folders(roots, browse, **kwargs)
+    monkeypatch.setattr(lidarr_module.httpx, "get", fake.get)
+    return fake
+
+
+def _listing(*names: str, parent: str = "/music") -> dict:
+    return {"parent": "/", "directories": [{"type": "folder", "name": n, "path": f"{parent}/{n}/"} for n in names],
+            "files": []}
+
+
+def test_the_provider_declares_that_it_answers_the_import_root_queries():
+    assert _provider().supports_import_roots() is True
+    assert _provider().supports_locate_in_import_roots() is True
+
+
+def test_import_roots_are_the_root_folders_of_lidarr_normalized(monkeypatch, session):
+    _folders(monkeypatch, [{"path": "/music/"}, {"path": "/"}, {"path": ""}, {"path": 3}, {"id": 1},
+                           {"path": "/music"}, {"path": "/other//"}])
+
+    assert _provider().list_import_roots(session) == ["/music", "/", "/other"]
+
+
+def test_import_roots_are_empty_without_a_lidarr_url(monkeypatch):
+    fake = _folders(monkeypatch, [{"path": "/music"}])
+    no_url = AuthSession(flow=AuthFlow.API_KEY, params={"apikey": "k"}, extra={})
+
+    assert _provider().list_import_roots(no_url) == []
+    assert _provider().locate_in_import_roots("X", no_url) is None
+    assert fake.calls == []
+
+
+def test_an_unreachable_lidarr_raises_for_both_queries(monkeypatch, session):
+    _folders(monkeypatch, [], unreachable=True)
+
+    with pytest.raises(LidarrUnreachable):
+        _provider().list_import_roots(session)
+    with pytest.raises(LidarrUnreachable):
+        _provider().locate_in_import_roots("X", session)
+
+
+def test_a_folder_is_located_in_the_second_root_by_the_file_browser(monkeypatch, session):
+    fake = _folders(monkeypatch, [{"path": "/music"}, {"path": "/more/"}],
+                    {"/music": _listing("Other", "Xs"), "/more": _listing("Other", "Musizeer Probe 1", parent="/more")})
+
+    assert _provider().locate_in_import_roots("Musizeer Probe 1", session) == "/more/Musizeer Probe 1"
+    assert fake.calls[1:] == [
+        ("/filesystem", {"path": "/music", "includeFiles": "false", "allowFoldersWithoutTrailingSlashes": "true"}),
+        ("/filesystem", {"path": "/more", "includeFiles": "false", "allowFoldersWithoutTrailingSlashes": "true"}),
+    ]
+
+
+def test_a_folder_that_is_in_no_root_is_not_located(monkeypatch, session):
+    # Wrong shapes of the answer count as "not in that root", and the name is compared exactly.
+    _folders(monkeypatch, [{"path": "/music"}, {"path": "/more"}, {"path": "/odd"}],
+             {"/music": _listing("probe"), "/more": ["not", "a", "dict"], "/odd": {"directories": "x"}})
+
+    assert _provider().locate_in_import_roots("Probe", session) is None
+
+
+@pytest.mark.parametrize("name", ["", ".", "..", "a/b", "../x", "a\0b"])
+def test_a_name_that_is_not_a_folder_name_is_refused_without_asking_lidarr(monkeypatch, session, name):
+    fake = _folders(monkeypatch, [{"path": "/music"}])
+
+    assert _provider().locate_in_import_roots(name, session) is None
+    assert fake.calls == []
+
+
+def test_a_lidarr_that_refuses_is_not_read_as_one_with_no_folders(monkeypatch, session):
+    """A refused key is not "Lidarr imports nowhere" nor "Lidarr does not see the folder": the host would mark a good
+    mapping failed."""
+    _folders(monkeypatch, [{"path": "/music"}], status=401)
+
+    with pytest.raises(lidarr_module.LidarrRejected):
+        _provider().list_import_roots(session)
+    with pytest.raises(lidarr_module.LidarrRejected):
+        _provider().locate_in_import_roots("Musizeer Probe x", session)
