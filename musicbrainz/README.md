@@ -14,7 +14,9 @@ another catalog is the same recording.
 | --- | --- |
 | `search_limit` | Results per search (optional; MusicBrainz allows up to 100). |
 
-There is no account and no key: MusicBrainz is public. Its terms ask clients for at most one request per second.
+There is no account and no key: MusicBrainz is public. Its terms ask clients for at most one request per second, and
+the provider keeps that pace for all its calls together: each request waits for its slot, and one that would wait longer
+than the HTTP timeout is refused at once as rate limited (the host then retries later).
 
 ## Permissions
 
